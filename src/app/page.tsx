@@ -1,31 +1,31 @@
+
 "use client";
 
-import Dashboard from "@/components/dashboard";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export default function Home() {
+export default function LandingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
+    if (!loading) {
+      if (user) {
+        router.push("/dashboard"); // Redirect to a route inside the (app) group
+      } else {
+        router.push("/login");
+      }
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   return (
-    <main>
-      <Dashboard />
-    </main>
+    <div className="flex min-h-screen items-center justify-center">
+      <p>Loading...</p>
+    </div>
   );
 }
+
+// Let's create a real dashboard route inside the (app) group
+// to avoid confusion. I'll create /dashboard and redirect there.
+// Create a new file at /src/app/(app)/dashboard/page.tsx

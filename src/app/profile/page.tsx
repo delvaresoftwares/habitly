@@ -11,10 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getUserProfile, updateUserProfile, uploadProfilePhoto } from "@/services/users";
 import type { UserProfile } from "@/services/users";
-import { Camera, LogOut, Users } from "lucide-react";
+import { Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
-import { RhythmFlowLogo } from "@/components/icons";
 
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth();
@@ -42,8 +40,6 @@ export default function ProfilePage() {
     setIsSaving(true);
     try {
       await updateUserProfile(user.uid, { displayName });
-      // This is a bit of a hack to get the user object to update
-      // In a real app you might want to re-fetch the user or use a global state manager
       if (user.updateProfile) {
           await user.updateProfile({ displayName });
       }
@@ -78,98 +74,82 @@ export default function ProfilePage() {
   };
   
   if (loading || !user || !profile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
+    return null; // Layout handles the loading state
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <RhythmFlowLogo className="h-6 w-6 text-primary" />
-          <h1 className="font-headline text-xl font-bold tracking-tighter text-foreground">
-            RhythmFlow
-          </h1>
-        </Link>
-        <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild>
-                <Link href="/leaderboard"><Users /> <span className="hidden sm:inline ml-2">Leaderboard</span></Link>
-            </Button>
-            <Button variant="ghost" onClick={signOut}><LogOut /> <span className="hidden sm:inline ml-2">Logout</span></Button>
-        </div>
-      </header>
-      <main className="flex-1 overflow-auto p-4 md:p-8">
-        <div className="mx-auto max-w-2xl">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-3xl">Your Profile</CardTitle>
-              <CardDescription>
-                View and edit your public profile information.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <Avatar className="h-24 w-24 border-4 border-primary/20">
-                    <AvatarImage src={profile.photoURL ?? undefined} alt={profile.displayName} />
-                    <AvatarFallback className="text-3xl">{profile.displayName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="icon"
-                    className="absolute bottom-0 right-0 rounded-full"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Camera size={18} />
-                  </Button>
-                  <Input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <h2 className="text-2xl font-bold">{profile.displayName}</h2>
-                  <p className="text-muted-foreground">{profile.email}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+    <div className="p-4 md:p-8">
+        <Card className="shadow-lg">
+        <CardHeader>
+            <CardTitle className="font-headline text-3xl">Your Profile</CardTitle>
+            <CardDescription>
+            View and edit your public profile information.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            <div className="flex items-center gap-6">
+            <div className="relative">
+                <Avatar className="h-24 w-24 border-4 border-primary/20">
+                <AvatarImage src={profile.photoURL ?? undefined} alt={profile.displayName} />
+                <AvatarFallback className="text-3xl">{profile.displayName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <Button
+                size="icon"
+                className="absolute bottom-0 right-0 rounded-full"
+                onClick={() => fileInputRef.current?.click()}
+                >
+                <Camera size={18} />
+                </Button>
                 <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="max-w-sm"
+                type="file"
+                ref={fileInputRef}
+                onChange={handlePhotoUpload}
+                className="hidden"
+                accept="image/*"
                 />
-              </div>
+            </div>
+            <div className="grid gap-1">
+                <h2 className="text-2xl font-bold">{profile.displayName}</h2>
+                <p className="text-muted-foreground">{profile.email}</p>
+            </div>
+            </div>
 
-              <div className="flex items-center justify-between rounded-lg bg-muted p-4">
-                <div className="text-center">
-                    <p className="text-sm font-medium text-muted-foreground">Streak</p>
-                    <p className="text-2xl font-bold">{profile.streak}</p>
-                </div>
-                <div className="text-center">
-                    <p className="text-sm font-medium text-muted-foreground">Habit Score</p>
-                    <p className="text-2xl font-bold">{profile.habitScore}</p>
-                </div>
-                 <div className="text-center">
-                    <p className="text-sm font-medium text-muted-foreground">Rank</p>
-                    <p className="text-2xl font-bold">#1</p>
-                </div>
-              </div>
+            <div className="space-y-2">
+            <Label htmlFor="displayName">Display Name</Label>
+            <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="max-w-sm"
+            />
+            </div>
 
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+            <div className="flex items-center justify-around rounded-lg bg-muted p-4">
+            <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">Streak</p>
+                <p className="text-2xl font-bold">{profile.streak}</p>
+            </div>
+            <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">Habit Score</p>
+                <p className="text-2xl font-bold">{profile.habitScore}</p>
+            </div>
+            <div className="text-center">
+                <p className="text-sm font-medium text-muted-foreground">Rank</p>
+                <p className="text-2xl font-bold">#1</p>
+            </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+                <Button onClick={signOut} variant="outline" >
+                    Logout
+                </Button>
+            </div>
+        </CardContent>
+        </Card>
     </div>
   );
 }
+

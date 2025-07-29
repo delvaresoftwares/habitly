@@ -5,7 +5,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   Activity, BarChart, Bed, BedDouble, BookOpen, BrainCircuit, Calendar, Check, CheckCircle2, Clapperboard, Coffee, Dumbbell, Flame, Gamepad2, GlassWater, LineChart, LogOut, Megaphone, Moon, Pizza, Settings, ShowerHead, Sun, Sunrise, Sunset, Timer, User, Utensils, X, Trophy, Users,
 } from "lucide-react";
-import Link from "next/link";
 import {
   Bar,
   BarChart as RechartsBarChart,
@@ -18,7 +17,6 @@ import {
 import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
 
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,17 +26,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RhythmFlowLogo } from "./icons";
 import {
   ChartContainer,
   ChartTooltip,
@@ -113,9 +102,9 @@ const HabitItem = ({ habit, onToggle }: { habit: Habit, onToggle: (id: string, c
   const background = useTransform(
     x,
     [-100, 0, 100],
-    ["#ef4444", "hsl(var(--card))", "#22c55e"]
+    ["hsl(var(--destructive) / 0.5)", "hsl(var(--card))", "hsl(var(--primary) / 0.5)"]
   );
-  const opacity = useTransform(x, [-100, 0, 100], [1, 0.5, 1]);
+  const opacity = useTransform(x, [-100, -50, 0, 50, 100], [1, 0.5, 1, 0.5, 1]);
 
   const handleDragEnd = (event: any, info: any) => {
     if (info.offset.x > 100) {
@@ -169,10 +158,11 @@ export default function Dashboard() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingHabits, setLoadingHabits] = useState(true);
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
+      setLoadingHabits(true);
       getUserHabits(user.uid)
         .then(userHabits => {
             setHabits(userHabits);
@@ -197,29 +187,25 @@ export default function Dashboard() {
 
     const oldCompletedState = habitToToggle.completed;
     
-    // Optimistic UI update
     setHabits(prevHabits =>
         prevHabits.map(habit =>
             habit.id === id ? { ...habit, completed: newCompletedState } : habit
         )
     );
     
-    // Optimistic score update
     let newStreak = userProfile.streak;
     let newHabitScore = userProfile.habitScore;
 
-    if (newCompletedState && !oldCompletedState) { // From incomplete to complete
+    if (newCompletedState && !oldCompletedState) { 
         newHabitScore++;
-    } else if (!newCompletedState && oldCompletedState) { // From complete to incomplete
-        newHabitScore--;
+    } else if (!newCompletedState && oldCompletedState) { 
+        newHabitScore = Math.max(0, newHabitScore - 1);
     }
     
-    // Check if all habits are completed to update streak
     const allCompleted = habits.every(h => h.id === id ? newCompletedState : h.completed);
     if (allCompleted) {
         newStreak++;
     } else {
-        // If we are un-completing the last habit, reduce streak
         if (habits.filter(h => h.completed).length === habits.length) {
             newStreak = Math.max(0, newStreak - 1);
         }
@@ -228,12 +214,10 @@ export default function Dashboard() {
     const newProfile = { ...userProfile, streak: newStreak, habitScore: newHabitScore };
     setUserProfile(newProfile);
 
-    // Persist changes
     try {
         await updateHabit(id, newCompletedState);
         await updateUserScores(user.uid, { streak: newStreak, habitScore: newHabitScore });
     } catch (error) {
-        // Revert UI on error
         setHabits(prevHabits =>
             prevHabits.map(habit =>
                 habit.id === id ? { ...habit, completed: oldCompletedState } : habit
@@ -245,194 +229,134 @@ export default function Dashboard() {
   };
   
   const DailyRoutineSkeleton = () => (
-    <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
-        <CardDescription>Stay on track to build the life you want.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i}>
+    <div className="space-y-4">
+      {[...Array(8)].map((_, i) => (
+        <Card key={i}>
             <CardContent className="flex items-center gap-4 p-4">
-              <Skeleton className="h-6 w-6 rounded-full" />
-              <div className="flex-grow space-y-2">
+            <Skeleton className="h-6 w-6 rounded-full" />
+            <div className="flex-grow space-y-2">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/4" />
-              </div>
-              <Skeleton className="h-6 w-6 rounded-full" />
+            </div>
+            <Skeleton className="h-6 w-6 rounded-full" />
             </CardContent>
-          </Card>
-        ))}
-      </CardContent>
-    </Card>
+        </Card>
+      ))}
+    </div>
   );
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
-        <div className="flex items-center gap-2">
-          <RhythmFlowLogo className="h-6 w-6 text-primary" />
-          <h1 className="font-headline text-xl font-bold tracking-tighter text-foreground">
-            RhythmFlow
-          </h1>
+    <div className="p-4 md:p-8 space-y-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Daily Progress</CardTitle>
+                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{Math.round(progress)}%</div>
+                <p className="text-xs text-muted-foreground">{habits.filter(h => h.completed).length} of {habits.length} habits completed</p>
+                 <Progress value={progress} className="h-2 mt-2" />
+              </CardContent>
+            </Card>
+            <Card className="shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
+                    <Flame className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{userProfile?.streak ?? 0} days</div>
+                    <p className="text-xs text-muted-foreground">Keep it up!</p>
+                </CardContent>
+            </Card>
+            <Card className="shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Habit Score</CardTitle>
+                    <Trophy className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{userProfile?.habitScore ?? 0}</div>
+                    <p className="text-xs text-muted-foreground">Total habits completed</p>
+                </CardContent>
+            </Card>
+            <Card className="shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Motivation</CardTitle>
+                    <Megaphone className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-xl font-bold">"The secret of getting ahead is getting started."</div>
+                    <p className="text-xs text-muted-foreground">- Mark Twain</p>
+                </CardContent>
+            </Card>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar>
-                <AvatarImage src={user?.photoURL ?? "https://placehold.co/100x100"} alt={user?.displayName ?? "User"} />
-                <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{user?.displayName ?? 'My Account'}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile">
-                <User className="mr-2" />
-                Profile
-              </Link>
-            </DropdownMenuItem>
-             <DropdownMenuItem asChild>
-              <Link href="/leaderboard">
-                <Users className="mr-2" />
-                Leaderboard
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut}>
-              <LogOut className="mr-2" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </header>
 
-      <main className="flex-1 overflow-auto p-4 md:p-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-8">
-            {loadingHabits ? <DailyRoutineSkeleton /> : (
+        <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-8">
                 <Card className="shadow-lg overflow-hidden">
                     <CardHeader>
                         <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
-                        <CardDescription>Slide right to complete, left to skip. Build the life you want.</CardDescription>
+                        <CardDescription>Slide right to complete, left to reset. Build the life you want.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        {habits.map((habit) => (
+                         {loadingHabits ? <DailyRoutineSkeleton /> : habits.map((habit) => (
                            <HabitItem key={habit.id} habit={habit} onToggle={handleHabitToggle} />
                         ))}
                     </CardContent>
                 </Card>
-            )}
-          </div>
-
-          <div className="space-y-8">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline">Daily Progress</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center gap-4">
-                <div
-                  className="relative h-32 w-32 rounded-full bg-muted flex items-center justify-center"
-                  style={{ background: `conic-gradient(hsl(var(--accent)) ${progress}%, hsl(var(--muted)) 0)` }}
-                >
-                    <div className="h-[7rem] w-[7rem] rounded-full bg-card flex items-center justify-center">
-                       <span className="text-2xl font-bold text-accent">{Math.round(progress)}%</span>
-                    </div>
-                </div>
-                <Progress value={progress} className="h-2 w-full" />
-                <p className="text-sm text-muted-foreground">You've completed {habits.filter(h => h.completed).length} of {habits.length} habits.</p>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="shadow-lg text-center bg-gradient-to-br from-primary/80 to-primary">
-                <CardHeader>
-                  <CardTitle className="font-headline text-primary-foreground text-lg">Streak</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center gap-2">
-                  <Flame className="h-8 w-8 text-yellow-300" />
-                  <span className="text-4xl font-bold text-primary-foreground">{userProfile?.streak ?? 0}</span>
-                </CardContent>
-              </Card>
-              <Card className="shadow-lg text-center bg-gradient-to-br from-accent/80 to-accent">
-                <CardHeader>
-                  <CardTitle className="font-headline text-accent-foreground text-lg">Habit Score</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center gap-2">
-                  <Trophy className="h-8 w-8 text-yellow-300" />
-                  <span className="text-4xl font-bold text-accent-foreground">{userProfile?.habitScore ?? 0}</span>
-                </CardContent>
-              </Card>
             </div>
 
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="font-headline">Progress Tracker</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="weekly">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                            <TabsTrigger value="yearly">Yearly</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="weekly">
-                            <ChartContainer config={chartConfig} className="h-60 w-full">
-                                <RechartsBarChart accessibilityLayer data={weeklyData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
-                                    <YAxis tickLine={false} axisLine={false} tickMargin={10}/>
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Bar dataKey="habits" fill="var(--color-habits)" radius={4} />
-                                </RechartsBarChart>
-                            </ChartContainer>
-                        </TabsContent>
-                        <TabsContent value="monthly">
-                            <ChartContainer config={chartConfig} className="h-60 w-full">
-                                <RechartsBarChart accessibilityLayer data={monthlyData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="week" tickLine={false} tickMargin={10} axisLine={false} />
-                                    <YAxis tickLine={false} axisLine={false} tickMargin={10}/>
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Bar dataKey="habits" fill="var(--color-habits)" radius={4} />
-                                </RechartsBarChart>
-                            </ChartContainer>
-                        </TabsContent>
-                        <TabsContent value="yearly">
-                             <ChartContainer config={chartConfig} className="h-60 w-full">
-                                <RechartsLineChart accessibilityLayer data={yearlyData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                                    <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Line type="monotone" dataKey="habits" stroke="var(--color-habits)" strokeWidth={2} dot={false} />
-                                </RechartsLineChart>
-                            </ChartContainer>
-                        </TabsContent>
-                    </Tabs>
-                </CardContent>
-            </Card>
-
-             <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center gap-4">
-                    <div className="p-2 bg-accent/20 rounded-full">
-                      <Megaphone className="h-6 w-6 text-accent" />
-                    </div>
-                    <CardTitle className="font-headline m-0">Motivation Boost</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground">"The secret of getting ahead is getting started." - Mark Twain</p>
-                </CardContent>
-            </Card>
-          </div>
+            <div className="space-y-8">
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="font-headline">Progress Tracker</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue="weekly">
+                            <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                                <TabsTrigger value="yearly">Yearly</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="weekly">
+                                <ChartContainer config={chartConfig} className="h-60 w-full">
+                                    <RechartsBarChart accessibilityLayer data={weeklyData}>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
+                                        <YAxis tickLine={false} axisLine={false} tickMargin={10}/>
+                                        <ChartTooltip content={<ChartTooltipContent />} />
+                                        <Bar dataKey="habits" fill="var(--color-habits)" radius={4} />
+                                    </RechartsBarChart>
+                                </ChartContainer>
+                            </TabsContent>
+                            <TabsContent value="monthly">
+                                <ChartContainer config={chartConfig} className="h-60 w-full">
+                                    <RechartsBarChart accessibilityLayer data={monthlyData}>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis dataKey="week" tickLine={false} tickMargin={10} axisLine={false} />
+                                        <YAxis tickLine={false} axisLine={false} tickMargin={10}/>
+                                        <ChartTooltip content={<ChartTooltipContent />} />
+                                        <Bar dataKey="habits" fill="var(--color-habits)" radius={4} />
+                                    </RechartsBarChart>
+                                </ChartContainer>
+                            </TabsContent>
+                            <TabsContent value="yearly">
+                                <ChartContainer config={chartConfig} className="h-60 w-full">
+                                    <RechartsLineChart accessibilityLayer data={yearlyData}>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
+                                        <YAxis tickLine={false} axisLine={false} tickMargin={10} />
+                                        <ChartTooltip content={<ChartTooltipContent />} />
+                                        <Line type="monotone" dataKey="habits" stroke="var(--color-habits)" strokeWidth={2} dot={false} />
+                                    </RechartsLineChart>
+                                </ChartContainer>
+                            </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-      </main>
     </div>
   );
 }
+

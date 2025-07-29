@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -22,7 +23,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Create user profile in Firestore if it doesn't exist
         await createUserProfile(user);
       }
       setUser(user);
@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const signOut = async () => {
     await firebaseSignOut(auth);
-    router.push('/login');
+    // Let the effect in the layout handle the redirect
   };
 
   return (
