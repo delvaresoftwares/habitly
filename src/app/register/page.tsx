@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -34,7 +35,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [user, loading, router]);
 
@@ -46,7 +47,7 @@ export default function RegisterPage() {
         password
       );
       await updateProfile(userCredential.user, { displayName: fullName });
-      router.push("/");
+      router.push("/dashboard");
     } catch (error: any) {
       toast({
         title: "Registration Failed",
@@ -60,7 +61,7 @@ export default function RegisterPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      router.push("/");
+      router.push("/dashboard");
     } catch (error: any) {
       toast({
         title: "Google Sign-In Failed",

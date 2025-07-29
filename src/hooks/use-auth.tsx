@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const signOut = async () => {
     await firebaseSignOut(auth);
-    // Let the effect in the layout handle the redirect
+    router.push('/login');
   };
 
   return (
