@@ -1,5 +1,5 @@
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 
 export interface Habit {
   id: string;
@@ -9,44 +9,45 @@ export interface Habit {
   iconName: string;
   userId: string;
   createdAt: any;
+  order: number;
 }
 
 const initialHabits = [
-    { text: "Wake up", time: "4:00 AM", iconName: 'Sunrise' },
-    { text: "Make bed", time: "4:01 AM", iconName: 'Bed' },
-    { text: "Brush teeth", time: "4:03 AM", iconName: 'Tooth' },
-    { text: "Drink a glass of water", time: "4:06 AM", iconName: 'GlassWater' },
-    { text: "Shower", time: "4:07 AM", iconName: 'ShowerHead' },
-    { text: "Meditation (20 min)", time: "4:20 AM", iconName: 'BrainCircuit' },
-    { text: "Warm up and pushups", time: "4:40 AM", iconName: 'Flame' },
-    { text: "Coffee/Tea", time: "4:50 AM", iconName: 'Coffee' },
-    { text: "Study session 1", time: "5:00 AM - 5:50 AM", iconName: 'BookOpen' },
-    { text: "Break", time: "5:50 AM - 6:00 AM", iconName: 'Timer' },
-    { text: "Study session 2", time: "6:00 AM - 6:50 AM", iconName: 'BookOpen' },
-    { text: "Watch sunrise", time: "6:50 AM - 7:00 AM", iconName: 'Sun' },
-    { text: "Breakfast & prepare for work", time: "7:00 AM - 8:00 AM", iconName: 'Utensils' },
-    { text: "Study session 3", time: "8:00 AM - 8:50 AM", iconName: 'BookOpen' },
-    { text: "Study session 4", time: "9:00 AM - 9:50 AM", iconName: 'BookOpen' },
-    { text: "Study session 5", time: "10:00 AM - 10:50 AM", iconName: 'BookOpen' },
-    { text: "Study session 6", time: "11:00 AM - 11:50 AM", iconName: 'BookOpen' },
-    { text: "Break/Relax", time: "12:00 PM - 1:00 PM", iconName: 'Gamepad2' },
-    { text: "Lunch", time: "1:00 PM - 2:00 PM", iconName: 'Pizza' },
-    { text: "Study session 7", time: "2:00 PM - 2:50 PM", iconName: 'BookOpen' },
-    { text: "Study session 8", time: "3:00 PM - 3:50 PM", iconName: 'BookOpen' },
-    { text: "Study session 9", time: "4:00 PM - 4:50 PM", iconName: 'BookOpen' },
-    { text: "Study session 10", time: "5:00 PM - 5:50 PM", iconName: 'BookOpen' },
-    { text: "Watch sunset", time: "6:00 PM - 7:00 PM", iconName: 'Sunset' },
-    { text: "Workout", time: "7:00 PM - 7:50 PM", iconName: 'Dumbbell' },
-    { text: "Shower", time: "7:50 PM", iconName: 'ShowerHead' },
-    { text: "Dinner & relax", time: "8:00 PM - 9:00 PM", iconName: 'Clapperboard' },
-    { text: "Study session 11", time: "9:00 PM - 9:50 PM", iconName: 'BookOpen' },
-    { text: "Go to bed", time: "9:50 PM", iconName: 'BedDouble' },
+    { text: "Wake up", time: "4:00 AM", iconName: 'Sunrise', order: 1 },
+    { text: "Make bed", time: "4:01 AM", iconName: 'Bed', order: 2 },
+    { text: "Brush teeth", time: "4:03 AM", iconName: 'Tooth', order: 3 },
+    { text: "Drink a glass of water", time: "4:06 AM", iconName: 'GlassWater', order: 4 },
+    { text: "Shower", time: "4:07 AM", iconName: 'ShowerHead', order: 5 },
+    { text: "Meditation (20 min)", time: "4:20 AM", iconName: 'BrainCircuit', order: 6 },
+    { text: "Warm up and pushups", time: "4:40 AM", iconName: 'Flame', order: 7 },
+    { text: "Coffee/Tea", time: "4:50 AM", iconName: 'Coffee', order: 8 },
+    { text: "Study session 1", time: "5:00 AM - 5:50 AM", iconName: 'BookOpen', order: 9 },
+    { text: "Break", time: "5:50 AM - 6:00 AM", iconName: 'Timer', order: 10 },
+    { text: "Study session 2", time: "6:00 AM - 6:50 AM", iconName: 'BookOpen', order: 11 },
+    { text: "Watch sunrise", time: "6:50 AM - 7:00 AM", iconName: 'Sun', order: 12 },
+    { text: "Breakfast & prepare for work", time: "7:00 AM - 8:00 AM", iconName: 'Utensils', order: 13 },
+    { text: "Study session 3", time: "8:00 AM - 8:50 AM", iconName: 'BookOpen', order: 14 },
+    { text: "Study session 4", time: "9:00 AM - 9:50 AM", iconName: 'BookOpen', order: 15 },
+    { text: "Study session 5", time: "10:00 AM - 10:50 AM", iconName: 'BookOpen', order: 16 },
+    { text: "Study session 6", time: "11:00 AM - 11:50 AM", iconName: 'BookOpen', order: 17 },
+    { text: "Break/Relax", time: "12:00 PM - 1:00 PM", iconName: 'Gamepad2', order: 18 },
+    { text: "Lunch", time: "1:00 PM - 2:00 PM", iconName: 'Pizza', order: 19 },
+    { text: "Study session 7", time: "2:00 PM - 2:50 PM", iconName: 'BookOpen', order: 20 },
+    { text: "Study session 8", time: "3:00 PM - 3:50 PM", iconName: 'BookOpen', order: 21 },
+    { text: "Study session 9", time: "4:00 PM - 4:50 PM", iconName: 'BookOpen', order: 22 },
+    { text: "Study session 10", time: "5:00 PM - 5:50 PM", iconName: 'BookOpen', order: 23 },
+    { text: "Watch sunset", time: "6:00 PM - 7:00 PM", iconName: 'Sunset', order: 24 },
+    { text: "Workout", time: "7:00 PM - 7:50 PM", iconName: 'Dumbbell', order: 25 },
+    { text: "Shower", time: "7:50 PM", iconName: 'ShowerHead', order: 26 },
+    { text: "Dinner & relax", time: "8:00 PM - 9:00 PM", iconName: 'Clapperboard', order: 27 },
+    { text: "Study session 11", time: "9:00 PM - 9:50 PM", iconName: 'BookOpen', order: 28 },
+    { text: "Go to bed", time: "9:50 PM", iconName: 'BedDouble', order: 29 },
 ];
 
 
 export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   const habitsRef = collection(db, 'habits');
-  const q = query(habitsRef, where('userId', '==', userId));
+  const q = query(habitsRef, where('userId', '==', userId), orderBy('order', 'asc'));
   const querySnapshot = await getDocs(q);
 
   if (querySnapshot.empty) {
@@ -62,26 +63,12 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
         batch.push(addDoc(habitsRef, newHabit));
     }
     await Promise.all(batch);
-    return getUserHabits(userId); // Re-fetch after creation
+    const newSnapshot = await getDocs(q);
+    return newSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Habit));
   }
   
   const habits = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Habit));
-  
-  // Custom sort to handle AM/PM and time ranges
-  return habits.sort((a, b) => {
-    const timeA = a.time.split(' ')[0];
-    const timeB = b.time.split(' ')[0];
-    
-    const dateA = new Date(`1970-01-01 ${timeA}`);
-    const dateB = new Date(`1970-01-01 ${timeB}`);
-
-    if (a.time.includes('PM') && !a.time.startsWith('12')) dateA.setHours(dateA.getHours() + 12);
-    if (b.time.includes('PM') && !b.time.startsWith('12')) dateB.setHours(dateB.getHours() + 12);
-    if (a.time.includes('AM') && a.time.startsWith('12')) dateA.setHours(dateA.getHours() - 12);
-    if (b.time.includes('AM') && b.time.startsWith('12')) dateB.setHours(dateB.getHours() - 12);
-
-    return dateA.getTime() - dateB.getTime();
-  });
+  return habits;
 };
 
 export const updateHabit = async (habitId: string, completed: boolean) => {

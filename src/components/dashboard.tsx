@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Activity, BarChart, Bed, BedDouble, BookOpen, BrainCircuit, Calendar, Check, CheckCircle2, Clapperboard, Coffee, Dumbbell, Flame, Gamepad2, GlassWater, LineChart, LogOut, Megaphone, Moon, Pizza, Settings, ShowerHead, Sun, Sunrise, Sunset, Timer, User, Utensils, X,
+  Activity, BarChart, Bed, BedDouble, BookOpen, BrainCircuit, Calendar, Check, CheckCircle2, Clapperboard, Coffee, Dumbbell, Flame, Gamepad2, GlassWater, LineChart, LogOut, Megaphone, Moon, Pizza, Settings, ShowerHead, Sun, Sunrise, Sunset, Timer, User, Utensils, X, Trophy, Users,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -46,6 +47,7 @@ import {
 } from "@/components/ui/chart";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserHabits, updateHabit, type Habit } from "@/services/habits";
+import { getUserProfile, updateUserScores, type UserProfile } from "@/services/users";
 import { Skeleton } from "./ui/skeleton";
 
 const weeklyData = [
@@ -165,7 +167,7 @@ const HabitItem = ({ habit, onToggle }: { habit: Habit, onToggle: (id: string, c
 
 export default function Dashboard() {
   const [habits, setHabits] = useState<Habit[]>([]);
-  const [streak, setStreak] = useState(21);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingHabits, setLoadingHabits] = useState(true);
   const { user, signOut } = useAuth();
 
@@ -176,6 +178,8 @@ export default function Dashboard() {
             setHabits(userHabits);
             setLoadingHabits(false);
         });
+      getUserProfile(user.uid)
+        .then(profile => setUserProfile(profile));
     }
   }, [user]);
 
@@ -186,8 +190,12 @@ export default function Dashboard() {
   }, [habits]);
 
   const handleHabitToggle = async (id: string, newCompletedState: boolean) => {
+    if (!user || !userProfile) return;
+
     const habitToToggle = habits.find(h => h.id === id);
     if (!habitToToggle || habitToToggle.completed === newCompletedState) return;
+
+    const oldCompletedState = habitToToggle.completed;
     
     // Optimistic UI update
     setHabits(prevHabits =>
@@ -195,28 +203,43 @@ export default function Dashboard() {
             habit.id === id ? { ...habit, completed: newCompletedState } : habit
         )
     );
+    
+    // Optimistic score update
+    let newStreak = userProfile.streak;
+    let newHabitScore = userProfile.habitScore;
 
-    // Update streak
-    let newStreak = streak;
-    if (newCompletedState) {
-        newStreak++;
-    } else if (newStreak > 0) {
-        newStreak--;
+    if (newCompletedState && !oldCompletedState) { // From incomplete to complete
+        newHabitScore++;
+    } else if (!newCompletedState && oldCompletedState) { // From complete to incomplete
+        newHabitScore--;
     }
-    setStreak(newStreak);
+    
+    // Check if all habits are completed to update streak
+    const allCompleted = habits.every(h => h.id === id ? newCompletedState : h.completed);
+    if (allCompleted) {
+        newStreak++;
+    } else {
+        // If we are un-completing the last habit, reduce streak
+        if (habits.filter(h => h.completed).length === habits.length) {
+            newStreak = Math.max(0, newStreak - 1);
+        }
+    }
 
-    // Persist change to Firestore
+    const newProfile = { ...userProfile, streak: newStreak, habitScore: newHabitScore };
+    setUserProfile(newProfile);
+
+    // Persist changes
     try {
         await updateHabit(id, newCompletedState);
+        await updateUserScores(user.uid, { streak: newStreak, habitScore: newHabitScore });
     } catch (error) {
         // Revert UI on error
         setHabits(prevHabits =>
             prevHabits.map(habit =>
-                habit.id === id ? { ...habit, completed: !newCompletedState } : habit
+                habit.id === id ? { ...habit, completed: oldCompletedState } : habit
             )
         );
-        // Revert streak
-        setStreak(streak);
+        setUserProfile(userProfile);
         console.error("Failed to update habit:", error);
     }
   };
@@ -265,9 +288,17 @@ export default function Dashboard() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>{user?.displayName ?? 'My Account'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2" />
-              Profile
+            <DropdownMenuItem asChild>
+              <Link href="/profile">
+                <User className="mr-2" />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+              <Link href="/leaderboard">
+                <Users className="mr-2" />
+                Leaderboard
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Settings className="mr-2" />
@@ -304,7 +335,7 @@ export default function Dashboard() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline">Daily Progress</CardTitle>
-              </Header>
+              </CardHeader>
               <CardContent className="flex flex-col items-center gap-4">
                 <div
                   className="relative h-32 w-32 rounded-full bg-muted flex items-center justify-center"
@@ -319,16 +350,26 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg text-center bg-gradient-to-br from-primary/80 to-primary">
-              <CardHeader>
-                <CardTitle className="font-headline text-primary-foreground">Completion Streak</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center gap-4">
-                <Flame className="h-12 w-12 text-yellow-300" />
-                <span className="text-6xl font-bold text-primary-foreground">{streak}</span>
-                <span className="text-lg text-primary-foreground/80">days</span>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="shadow-lg text-center bg-gradient-to-br from-primary/80 to-primary">
+                <CardHeader>
+                  <CardTitle className="font-headline text-primary-foreground text-lg">Streak</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center gap-2">
+                  <Flame className="h-8 w-8 text-yellow-300" />
+                  <span className="text-4xl font-bold text-primary-foreground">{userProfile?.streak ?? 0}</span>
+                </CardContent>
+              </Card>
+              <Card className="shadow-lg text-center bg-gradient-to-br from-accent/80 to-accent">
+                <CardHeader>
+                  <CardTitle className="font-headline text-accent-foreground text-lg">Habit Score</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center gap-2">
+                  <Trophy className="h-8 w-8 text-yellow-300" />
+                  <span className="text-4xl font-bold text-accent-foreground">{userProfile?.habitScore ?? 0}</span>
+                </CardContent>
+              </Card>
+            </div>
 
             <Card className="shadow-lg">
                 <CardHeader>
@@ -372,7 +413,7 @@ export default function Dashboard() {
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Line type="monotone" dataKey="habits" stroke="var(--color-habits)" strokeWidth={2} dot={false} />
                                 </RechartsLineChart>
-                            </Container>
+                            </ChartContainer>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
