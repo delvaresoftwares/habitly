@@ -53,11 +53,7 @@ export default function LeaderboardPage() {
     );
     
     if (authLoading || !currentUser) {
-        return (
-          <div className="flex min-h-screen items-center justify-center">
-            <p>Loading...</p>
-          </div>
-        );
+        return null; // The layout handles loading states
     }
 
     return (
