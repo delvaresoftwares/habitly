@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { getUserProfile } from "@/services/users";
+import { getUserProfile, getMonthlyCompletionData } from "@/services/users";
 import type { UserProfile } from "@/services/users";
 import { BarChart, CalendarDays, Flame, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,16 +18,6 @@ import {
 } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, XAxis, YAxis } from "recharts";
 
-
-const chartData = [
-  { month: "January", habits: 186 },
-  { month: "February", habits: 305 },
-  { month: "March", habits: 237 },
-  { month: "April", habits: 73 },
-  { month: "May", habits: 209 },
-  { month: "June", habits: 214 },
-];
-
 const chartConfig = {
   habits: {
     label: "Habits Completed",
@@ -35,17 +25,22 @@ const chartConfig = {
   },
 };
 
-
 export default function UserProfilePage({ params }: { params: { userId: string } }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [chartData, setChartData] = useState<{ month: string; habits: number }[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     if (params.userId) {
-      getUserProfile(params.userId).then(p => {
+      setProfileLoading(true);
+      Promise.all([
+        getUserProfile(params.userId),
+        getMonthlyCompletionData(params.userId),
+      ]).then(([p, data]) => {
         setProfile(p);
+        setChartData(data);
         setProfileLoading(false);
       });
     }
@@ -125,3 +120,4 @@ export default function UserProfilePage({ params }: { params: { userId: string }
   );
 }
 
+    

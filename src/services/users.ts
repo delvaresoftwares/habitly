@@ -1,7 +1,9 @@
+
 import { db, storage } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, updateDoc, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, updateDoc, getDocs, query, orderBy, Timestamp, collectionGroup, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { User } from 'firebase/auth';
+import { format, subMonths, startOfMonth } from 'date-fns';
 
 export interface UserProfile {
   uid: string;
@@ -68,3 +70,45 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => doc.data() as UserProfile);
 }
+
+export const getMonthlyCompletionData = async (userId: string): Promise<{ month: string; habits: number }[]> => {
+    const months = [];
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+        months.push(startOfMonth(subMonths(today, i)));
+    }
+
+    const historyRef = collection(db, 'users', userId, 'habitHistory');
+    const monthlyData: { [key: string]: number } = {};
+
+    // Initialize months
+    for (const monthDate of months) {
+        const monthKey = format(monthDate, 'yyyy-MM');
+        monthlyData[monthKey] = 0;
+    }
+    
+    const sixMonthsAgo = format(months[0], 'yyyy-MM-dd');
+
+    const q = query(historyRef, where('date', '>=', sixMonthsAgo), where('completed', '==', true));
+    const querySnapshot = await getDocs(q);
+
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const date = new Date(data.date);
+        const monthKey = format(date, 'yyyy-MM');
+        if (monthlyData.hasOwnProperty(monthKey)) {
+            monthlyData[monthKey]++;
+        }
+    });
+
+    return months.map(monthDate => {
+        const monthKey = format(monthDate, 'yyyy-MM');
+        const monthName = format(monthDate, 'MMMM');
+        return {
+            month: monthName,
+            habits: monthlyData[monthKey]
+        };
+    });
+};
+
+    

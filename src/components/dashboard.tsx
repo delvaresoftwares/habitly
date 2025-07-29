@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from 'next/link';
 import {
-  Activity, Bed, BedDouble, BookOpen, BrainCircuit, Check, CheckCircle2, Clapperboard, Coffee, Dumbbell, Flame, Gamepad2, GlassWater, Moon, Pizza, ShowerHead, Sun, Sunrise, Sunset, Timer, Utensils, X,
+  Activity, Bed, BedDouble, BookOpen, BrainCircuit, Check, CheckCircle2, Clapperboard, Coffee, Dumbbell, Flame, Gamepad2, GlassWater, Moon, Pizza, ShowerHead, Sun, Sunrise, Sunset, Timer, Utensils, X, Undo2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -42,51 +42,48 @@ const getIcon = (iconName: string) => {
 const HabitCard = ({ habit, onComplete, onUndo }: { habit: Habit, onComplete: (id: string) => void, onUndo: (id: string) => void }) => {
   const [isDragging, setIsDragging] = useState(false);
   
-  const handleDragEnd = (event: any, info: any) => {
-    setIsDragging(false);
-    if (info.offset.x < -100) { // Slide left to complete
-      onComplete(habit.id);
-    } else if (info.offset.x > 100) { // Slide right to undo
-      onUndo(habit.id);
-    }
-  };
-
   return (
-    <motion.div
-      layout
-      initial={{ y: 50, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ x: -300, opacity: 0, transition: { duration: 0.2 } }}
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElasticity={0.2}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={handleDragEnd}
-      className="relative"
-    >
-      <Link href={`/habit/${habit.id}`} className="block">
-        <Card className={`overflow-hidden shadow-lg transition-all duration-300 ${isDragging ? 'shadow-2xl' : 'hover:shadow-xl'} active:scale-[0.98]`}>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted flex-shrink-0">
-              {getIcon(habit.iconName)}
-            </div>
-            <div className="flex-grow overflow-hidden">
-                <p className="font-bold truncate">{habit.text}</p>
-                <p className="text-sm text-muted-foreground">{habit.time}</p>
-            </div>
-            <div className="flex gap-2 items-center text-muted-foreground/50">
-              {habit.completedToday ? <Check className="text-green-500" /> : <X className="text-red-500" />}
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-      <div className="absolute inset-y-0 left-0 flex items-center pl-4 pr-8 bg-green-500/20 rounded-l-lg -z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Check className="h-6 w-6 text-green-500" />
-      </div>
-      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pl-8 bg-red-500/20 rounded-r-lg -z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <X className="h-6 w-6 text-red-500" />
-      </div>
-    </motion.div>
+    <div className="relative group">
+        <motion.div
+            layout
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ x: -300, opacity: 0, transition: { duration: 0.2 } }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElasticity={0.2}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={(event, info) => {
+                setIsDragging(false);
+                if (info.offset.x < -100) { // Slide left to complete
+                    onComplete(habit.id);
+                } else if (info.offset.x > 100) { // Slide right to undo
+                    onUndo(habit.id);
+                }
+            }}
+            className="relative z-10"
+        >
+            <Link href={`/habit/${habit.id}`} className="block">
+                <Card className={`overflow-hidden shadow-lg transition-all duration-300 ${isDragging ? 'shadow-2xl' : 'hover:shadow-xl'} active:scale-[0.98] bg-card`}>
+                <CardContent className="flex items-center gap-4 p-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted flex-shrink-0">
+                    {getIcon(habit.iconName)}
+                    </div>
+                    <div className="flex-grow overflow-hidden">
+                        <p className="font-bold truncate">{habit.text}</p>
+                        <p className="text-sm text-muted-foreground">{habit.time}</p>
+                    </div>
+                </CardContent>
+                </Card>
+            </Link>
+        </motion.div>
+        <div className="absolute inset-y-0 left-0 flex items-center pl-6 pr-8 bg-green-500 rounded-lg -z-10 opacity-100 transition-opacity">
+            <Check className="h-8 w-8 text-white" />
+        </div>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-6 pl-8 bg-gray-500 rounded-lg -z-10 opacity-100 transition-opacity">
+            <Undo2 className="h-8 w-8 text-white" />
+        </div>
+    </div>
   );
 };
 
@@ -94,6 +91,7 @@ const HabitCard = ({ habit, onComplete, onUndo }: { habit: Habit, onComplete: (i
 export default function Dashboard() {
   const [allHabits, setAllHabits] = useState<Habit[]>([]);
   const [displayedHabits, setDisplayedHabits] = useState<Habit[]>([]);
+  const [completedHabits, setCompletedHabits] = useState<Habit[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingHabits, setLoadingHabits] = useState(true);
   const { user } = useAuth();
@@ -107,6 +105,7 @@ export default function Dashboard() {
       ]).then(([userHabits, profile]) => {
           setAllHabits(userHabits);
           setDisplayedHabits(userHabits.filter(h => !h.completedToday));
+          setCompletedHabits(userHabits.filter(h => h.completedToday));
           setUserProfile(profile);
           setLoadingHabits(false);
       });
@@ -116,14 +115,14 @@ export default function Dashboard() {
   const handleHabitComplete = async (id: string) => {
     if (!user || !userProfile) return;
     
-    // Optimistic UI update
-    setDisplayedHabits(prev => prev.filter(h => h.id !== id));
-    
     const habitToUpdate = allHabits.find(h => h.id === id);
     if (!habitToUpdate || habitToUpdate.completedToday) return;
 
+    // Optimistic UI update
     const newAllHabits = allHabits.map(h => h.id === id ? { ...h, completedToday: true } : h);
     setAllHabits(newAllHabits);
+    setDisplayedHabits(newAllHabits.filter(h => !h.completedToday));
+    setCompletedHabits(newAllHabits.filter(h => h.completedToday));
     
     let newStreak = userProfile.streak;
     const newHabitScore = userProfile.habitScore + 1;
@@ -145,6 +144,7 @@ export default function Dashboard() {
        setAllHabits(allHabits);
        setUserProfile(userProfile);
        setDisplayedHabits(allHabits.filter(h => !h.completedToday));
+       setCompletedHabits(allHabits.filter(h => h.completedToday));
     }
   };
 
@@ -158,6 +158,7 @@ export default function Dashboard() {
     const newAllHabits = allHabits.map(h => h.id === id ? { ...h, completedToday: false } : h);
     setAllHabits(newAllHabits);
     setDisplayedHabits(newAllHabits.filter(h => !h.completedToday));
+    setCompletedHabits(newAllHabits.filter(h => h.completedToday));
     
     let newStreak = userProfile.streak;
     const newHabitScore = Math.max(0, userProfile.habitScore - 1);
@@ -179,6 +180,7 @@ export default function Dashboard() {
         setAllHabits(allHabits);
         setUserProfile(userProfile);
         setDisplayedHabits(allHabits.filter(h => !h.completedToday));
+        setCompletedHabits(allHabits.filter(h => h.completedToday));
     }
   };
   
@@ -197,30 +199,51 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <Card className="shadow-lg overflow-hidden">
-        <CardHeader>
-            <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
-            <CardDescription>Slide left to complete. Tap to see details and history.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-              {loadingHabits ? (
-                <DailyRoutineSkeleton />
-              ) : displayedHabits.length > 0 ? (
-                <AnimatePresence>
-                    {displayedHabits.map((habit) => (
-                        <HabitCard key={habit.id} habit={habit} onComplete={handleHabitComplete} onUndo={handleHabitUndo} />
-                    ))}
-                </AnimatePresence>
-              ) : (
-                <div className="text-center py-12">
-                    <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-                    <h3 className="mt-2 text-xl font-semibold">All Done for Today!</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">You've completed all your habits. Great job!</p>
-                </div>
-              )}
-        </CardContent>
-      </Card>
+    <div className="p-4 md:p-8 space-y-6">
+        <div className="space-y-4">
+            <h2 className="font-headline text-3xl">Your Daily Routine</h2>
+            <p className="text-muted-foreground">Slide left to complete, right to undo. Tap for details.</p>
+        </div>
+        
+        {loadingHabits ? (
+        <DailyRoutineSkeleton />
+        ) : displayedHabits.length > 0 ? (
+        <AnimatePresence>
+            {displayedHabits.map((habit) => (
+                <HabitCard key={habit.id} habit={habit} onComplete={handleHabitComplete} onUndo={handleHabitUndo} />
+            ))}
+        </AnimatePresence>
+        ) : (
+        <div className="text-center py-12">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
+            <h3 className="mt-2 text-xl font-semibold">All Done for Today!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">You've completed all your habits. Great job!</p>
+        </div>
+        )}
+
+        {completedHabits.length > 0 && (
+            <div className="space-y-4 pt-8">
+                <h3 className="font-headline text-2xl">Completed</h3>
+                {completedHabits.map((habit) => (
+                    <Link href={`/habit/${habit.id}`} key={habit.id} className="block">
+                         <Card className="bg-muted/50">
+                            <CardContent className="flex items-center gap-4 p-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-background flex-shrink-0">
+                                {getIcon(habit.iconName)}
+                                </div>
+                                <div className="flex-grow overflow-hidden">
+                                    <p className="font-bold truncate text-muted-foreground line-through">{habit.text}</p>
+                                    <p className="text-sm text-muted-foreground">{habit.time}</p>
+                                </div>
+                                <Check className="text-green-500" />
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ))}
+            </div>
+        )}
     </div>
   );
 }
+
+    
