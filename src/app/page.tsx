@@ -25,7 +25,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-// Let's create a real dashboard route inside the (app) group
-// to avoid confusion. I'll create /dashboard and redirect there.
-// Create a new file at /src/app/(app)/dashboard/page.tsx
