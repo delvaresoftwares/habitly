@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Flame,
   LineChart,
+  LogOut,
   Megaphone,
   Moon,
   Settings,
@@ -53,14 +54,15 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { useAuth } from "@/hooks/use-auth";
 
 const initialHabits = [
-  { id: "h1", text: "Morning Jog (30 mins)", time: "6:30 AM", completed: false, icon: <Sun className="h-5 w-5 text-yellow-500" /> },
-  { id: "h2", text: "Read 10 pages of a book", time: "7:00 AM", completed: false, icon: <Activity className="h-5 w-5 text-red-500" /> },
-  { id: "h3", text: "Meditate for 15 minutes", time: "7:30 AM", completed: true, icon: <Flame className="h-5 w-5 text-orange-500" /> },
-  { id: "h4", text: "Plan your day", time: "8:00 AM", completed: false, icon: <Calendar className="h-5 w-5 text-blue-500" /> },
-  { id: "h5", text: "Deep work session (90 mins)", time: "9:00 AM", completed: false, icon: <User className="h-5 w-5 text-green-500" /> },
-  { id: "h6", text: "Review progress and journal", time: "8:00 PM", completed: false, icon: <Moon className="h-5 w-5 text-purple-500" /> },
+  { id: "h1", text: "Wake up at 5:30 AM", time: "5:30 AM", completed: false, icon: <Sun className="h-5 w-5 text-yellow-500" /> },
+  { id: "h2", text: "15 minutes of Mindfulness Meditation", time: "6:00 AM", completed: false, icon: <Flame className="h-5 w-5 text-orange-500" /> },
+  { id: "h3", text: "30-minute HIIT workout", time: "6:30 AM", completed: true, icon: <Activity className="h-5 w-5 text-red-500" /> },
+  { id: "h4", text: "Read for 20 minutes", time: "7:15 AM", completed: false, icon: <User className="h-5 w-5 text-green-500" /> },
+  { id: "h5", text: "Plan your day", time: "8:00 AM", completed: false, icon: <Calendar className="h-5 w-5 text-blue-500" /> },
+  { id: "h6", text: "Reflect and journal before bed", time: "10:00 PM", completed: false, icon: <Moon className="h-5 w-5 text-purple-500" /> },
 ];
 
 const weeklyData = [
@@ -100,6 +102,7 @@ export default function Dashboard() {
   const [habits, setHabits] = useState(initialHabits);
   const [streak, setStreak] = useState(21);
   const [mounted, setMounted] = useState(false);
+  const { user, signOut } = useAuth();
 
   useEffect(() => setMounted(true), []);
 
@@ -143,13 +146,13 @@ export default function Dashboard() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar>
-                <AvatarImage src="https://placehold.co/100x100" alt="@user" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src={user?.photoURL ?? "https://placehold.co/100x100"} alt={user?.displayName ?? "User"} />
+                <AvatarFallback>{user?.displayName?.charAt(0) ?? 'U'}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>{user?.displayName ?? 'My Account'}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2" />
@@ -160,8 +163,9 @@ export default function Dashboard() {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/login">Logout</Link>
+            <DropdownMenuItem onClick={signOut}>
+              <LogOut className="mr-2" />
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
