@@ -1,5 +1,5 @@
 import { db, storage } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, updateDoc, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, updateDoc, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { User } from 'firebase/auth';
 
@@ -10,6 +10,7 @@ export interface UserProfile {
   photoURL: string | null;
   streak: number;
   habitScore: number;
+  lastLogin: Timestamp;
 }
 
 export const createUserProfile = async (user: User) => {
@@ -25,6 +26,11 @@ export const createUserProfile = async (user: User) => {
             photoURL: photoURL ?? null,
             streak: 0,
             habitScore: 0,
+            lastLogin: Timestamp.now()
+        });
+    } else {
+        await updateDoc(userRef, {
+            lastLogin: Timestamp.now()
         });
     }
 };

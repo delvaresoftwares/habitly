@@ -13,7 +13,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main>
+    <main className="overflow-x-hidden">
       <Dashboard />
     </main>
   );
