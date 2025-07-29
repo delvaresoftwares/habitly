@@ -4,20 +4,25 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { getHabitById, getHabitHistory, Habit, HabitHistory } from '@/services/habits';
+import { getHabitById, getHabitHistory, Habit, HabitHistory, updateHabit } from '@/services/habits';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Edit, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function HabitDetailPage({ params }: { params: { habitId: string } }) {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const { toast } = useToast();
     const [habit, setHabit] = useState<Habit | null>(null);
     const [history, setHistory] = useState<HabitHistory>({});
     const [loading, setLoading] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+    const [newTime, setNewTime] = useState("");
 
     useEffect(() => {
         if (user && params.habitId) {
@@ -26,11 +31,27 @@ export default function HabitDetailPage({ params }: { params: { habitId: string 
                 getHabitHistory(user.uid, params.habitId as string)
             ]).then(([habitData, historyData]) => {
                 setHabit(habitData);
+                if (habitData) {
+                    setNewTime(habitData.time);
+                }
                 setHistory(historyData);
                 setLoading(false);
             });
         }
     }, [user, params.habitId]);
+
+    const handleSaveTime = async () => {
+        if (!user || !habit) return;
+        try {
+            await updateHabit(user.uid, habit.id, { time: newTime });
+            setHabit({ ...habit, time: newTime });
+            setIsEditing(false);
+            toast({ title: "Success", description: "Habit time updated." });
+        } catch (error: any) {
+            toast({ title: "Error", description: "Failed to update time.", variant: "destructive" });
+        }
+    };
+
 
     if (authLoading || loading) {
         return (
@@ -55,7 +76,22 @@ export default function HabitDetailPage({ params }: { params: { habitId: string 
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-3xl">{habit.text}</CardTitle>
-                    <CardDescription>{habit.time}</CardDescription>
+                     <div className="flex items-center gap-4">
+                        {isEditing ? (
+                            <Input 
+                                value={newTime}
+                                onChange={(e) => setNewTime(e.target.value)}
+                                className="max-w-xs"
+                            />
+                        ) : (
+                            <CardDescription>{habit.time}</CardDescription>
+                        )}
+                        {isEditing ? (
+                            <Button size="icon" onClick={handleSaveTime}><Save className="h-4 w-4" /></Button>
+                        ) : (
+                            <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}><Edit className="h-4 w-4" /></Button>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <p className="text-lg">{habit.description}</p>

@@ -152,3 +152,8 @@ export const getHabitHistory = async (userId: string, habitId: string): Promise<
     });
     return history;
 };
+
+export const updateHabit = async (userId: string, habitId: string, data: { time?: string }) => {
+    const habitRef = doc(db, 'users', userId, 'habits', habitId);
+    await updateDoc(habitRef, data);
+};

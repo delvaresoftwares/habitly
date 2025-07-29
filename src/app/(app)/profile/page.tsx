@@ -9,10 +9,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getUserProfile, updateUserProfile, uploadProfilePhoto } from "@/services/users";
+import { getUserProfile, updateUserProfile, uploadProfilePhoto, updateUserScores } from "@/services/users";
 import type { UserProfile } from "@/services/users";
 import { Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth();
@@ -73,6 +84,20 @@ export default function ProfilePage() {
     }
   };
   
+    const handleResetScores = async () => {
+    if (!user || !profile) return;
+    setIsSaving(true);
+    try {
+      await updateUserScores(user.uid, { streak: 0, habitScore: 0 });
+      setProfile({ ...profile, streak: 0, habitScore: 0 });
+      toast({ title: "Success", description: "Your scores have been reset." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (loading || !user || !profile) {
     return null; // Layout handles the loading state
   }
@@ -143,6 +168,24 @@ export default function ProfilePage() {
                 <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
+                 <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isSaving}>Reset Scores</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently reset your
+                        streak and habit score to 0.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleResetScores}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button onClick={signOut} variant="outline" >
                     Logout
                 </Button>
