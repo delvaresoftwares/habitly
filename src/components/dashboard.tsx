@@ -2,18 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Activity,
-  BarChart,
-  Calendar,
-  CheckCircle2,
-  Flame,
-  LineChart,
-  LogOut,
-  Megaphone,
-  Moon,
-  Settings,
-  Sun,
-  User,
+  Activity, BarChart, Bed, BedDouble, BookOpen, BrainCircuit, Calendar, Check, CheckCircle2, Clapperboard, Coffee, Dumbbell, Flame, Gamepad2, GlassWater, LineChart, LogOut, Megaphone, Moon, Pizza, Settings, ShowerHead, Sun, Sunrise, Sunset, Timer, User, Utensils, X,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -25,6 +14,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -36,7 +27,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,16 +82,86 @@ const chartConfig: ChartConfig = {
 };
 
 const getIcon = (iconName: string) => {
+    const className = "h-6 w-6";
     switch (iconName) {
-        case 'Sun': return <Sun className="h-5 w-5 text-yellow-500" />;
-        case 'Flame': return <Flame className="h-5 w-5 text-orange-500" />;
-        case 'Activity': return <Activity className="h-5 w-5 text-red-500" />;
-        case 'User': return <User className="h-5 w-5 text-green-500" />;
-        case 'Calendar': return <Calendar className="h-5 w-5 text-blue-500" />;
-        case 'Moon': return <Moon className="h-5 w-5 text-purple-500" />;
-        default: return <Activity className="h-5 w-5 text-gray-500" />;
+        case 'Sunrise': return <Sunrise className={`${className} text-yellow-400`} />;
+        case 'Bed': return <Bed className={`${className} text-blue-400`} />;
+        case 'Tooth': return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className + " text-gray-300"}><path d="M11.2 3.193c.15-.386.44-.693.8-.893C14.7 1.3 15 2.5 15 3c0 .667 0 1.333 0 2h2c.5 0 1 .5 1 1v2c0 .5-.5 1-1 1h-2c0 .667 0 1.333 0 2 0 .5-.5 1-1 1H9c-.5 0-1-.5-1-1 0-.667 0-1.333 0-2H6c-.5 0-1-.5-1-1V7c0-.5.5-1 1-1h2c0-.667 0-1.333 0-2 0-.5.3-1.7 2.2-2.807Z"/><path d="M6 12h12c0 1.5-1 3-3 3H9c-2 0-3-1.5-3-3Z"/><path d="M18 15v2a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-2"/><path d="M14 15.5v.5"/><path d="M10 15.5v.5"/></svg>;
+        case 'GlassWater': return <GlassWater className={`${className} text-cyan-400`} />;
+        case 'ShowerHead': return <ShowerHead className={`${className} text-sky-400`} />;
+        case 'BrainCircuit': return <BrainCircuit className={`${className} text-purple-400`} />;
+        case 'Flame': return <Flame className={`${className} text-orange-400`} />;
+        case 'Coffee': return <Coffee className={`${className} text-amber-600`} />;
+        case 'BookOpen': return <BookOpen className={`${className} text-green-400`} />;
+        case 'Timer': return <Timer className={`${className} text-gray-400`} />;
+        case 'Sun': return <Sun className={`${className} text-yellow-300`} />;
+        case 'Utensils': return <Utensils className={`${className} text-lime-400`} />;
+        case 'Gamepad2': return <Gamepad2 className={`${className} text-indigo-400`} />;
+        case 'Pizza': return <Pizza className={`${className} text-red-400`} />;
+        case 'Sunset': return <Sunset className={`${className} text-orange-500`} />;
+        case 'Dumbbell': return <Dumbbell className={`${className} text-rose-400`} />;
+        case 'Clapperboard': return <Clapperboard className={`${className} text-fuchsia-400`} />;
+        case 'BedDouble': return <BedDouble className={`${className} text-blue-500`} />;
+        default: return <Activity className={`${className} text-gray-500`} />;
     }
 }
+
+const HabitItem = ({ habit, onToggle }: { habit: Habit, onToggle: (id: string, completed: boolean) => void }) => {
+  const x = useMotionValue(0);
+  const background = useTransform(
+    x,
+    [-100, 0, 100],
+    ["#ef4444", "hsl(var(--card))", "#22c55e"]
+  );
+  const opacity = useTransform(x, [-100, 0, 100], [1, 0.5, 1]);
+
+  const handleDragEnd = (event: any, info: any) => {
+    if (info.offset.x > 100) {
+      onToggle(habit.id, true);
+    } else if (info.offset.x < -100) {
+      onToggle(habit.id, false);
+    }
+  };
+
+  return (
+    <motion.div
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={handleDragEnd}
+      style={{ x, background }}
+      className={`rounded-lg transition-all duration-300 relative`}
+    >
+      <motion.div
+        style={{ opacity }}
+        className={`p-4 flex items-center gap-4 bg-card rounded-lg`}
+      >
+        <AnimatePresence>
+            {habit.completed && (
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-green-500"
+                >
+                    <CheckCircle2 size={24} />
+                </motion.div>
+            )}
+        </AnimatePresence>
+        <div className="text-accent pl-8">{getIcon(habit.iconName)}</div>
+        <div className="flex-grow">
+            <p className="font-semibold">{habit.text}</p>
+            <p className="text-sm text-muted-foreground">{habit.time}</p>
+        </div>
+        <div className="flex gap-2 items-center">
+            <X className="text-red-500/50" />
+            <div className="h-6 w-px bg-border" />
+            <Check className="text-green-500/50" />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 
 export default function Dashboard() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -125,11 +185,9 @@ export default function Dashboard() {
     return (completedCount / habits.length) * 100;
   }, [habits]);
 
-  const handleHabitToggle = async (id: string) => {
+  const handleHabitToggle = async (id: string, newCompletedState: boolean) => {
     const habitToToggle = habits.find(h => h.id === id);
-    if (!habitToToggle) return;
-
-    const newCompletedState = !habitToToggle.completed;
+    if (!habitToToggle || habitToToggle.completed === newCompletedState) return;
     
     // Optimistic UI update
     setHabits(prevHabits =>
@@ -228,29 +286,14 @@ export default function Dashboard() {
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
             {loadingHabits ? <DailyRoutineSkeleton /> : (
-                <Card className="shadow-lg">
+                <Card className="shadow-lg overflow-hidden">
                     <CardHeader>
                         <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
-                        <CardDescription>Stay on track to build the life you want.</CardDescription>
+                        <CardDescription>Slide right to complete, left to skip. Build the life you want.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-2">
                         {habits.map((habit) => (
-                            <Card key={habit.id} className={`transition-all duration-300 ${habit.completed ? 'bg-accent/10 border-accent' : 'bg-card'}`}>
-                                <CardContent className="flex items-center gap-4 p-4">
-                                    <div className="text-accent">{getIcon(habit.iconName)}</div>
-                                    <div className="flex-grow">
-                                        <p className="font-semibold">{habit.text}</p>
-                                        <p className="text-sm text-muted-foreground">{habit.time}</p>
-                                    </div>
-                                    <Checkbox
-                                        id={`habit-${habit.id}`}
-                                        checked={habit.completed}
-                                        onCheckedChange={() => handleHabitToggle(habit.id)}
-                                        className="h-6 w-6 rounded-full data-[state=checked]:bg-accent data-[state=checked]:border-accent-foreground border-muted-foreground"
-                                        aria-label={`Mark ${habit.text} as complete`}
-                                    />
-                                </CardContent>
-                            </Card>
+                           <HabitItem key={habit.id} habit={habit} onToggle={handleHabitToggle} />
                         ))}
                     </CardContent>
                 </Card>
@@ -261,7 +304,7 @@ export default function Dashboard() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline">Daily Progress</CardTitle>
-              </CardHeader>
+              </Header>
               <CardContent className="flex flex-col items-center gap-4">
                 <div
                   className="relative h-32 w-32 rounded-full bg-muted flex items-center justify-center"
@@ -329,7 +372,7 @@ export default function Dashboard() {
                                     <ChartTooltip content={<ChartTooltipContent />} />
                                     <Line type="monotone" dataKey="habits" stroke="var(--color-habits)" strokeWidth={2} dot={false} />
                                 </RechartsLineChart>
-                            </ChartContainer>
+                            </Container>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
