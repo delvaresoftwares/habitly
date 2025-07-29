@@ -1,5 +1,6 @@
+
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, orderBy, writeBatch } from 'firebase/firestore';
 
 export interface Habit {
   id: string;
@@ -51,18 +52,21 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   const querySnapshot = await getDocs(q);
 
   if (querySnapshot.empty) {
-    // Create initial habits for new user
-    const batch = [];
+    // Create initial habits for new user using a batch write
+    const batch = writeBatch(db);
     for (const habit of initialHabits) {
+        const newHabitRef = doc(collection(db, 'habits'));
         const newHabit = {
             ...habit,
             userId,
             completed: false,
             createdAt: serverTimestamp()
         };
-        batch.push(addDoc(habitsRef, newHabit));
+        batch.set(newHabitRef, newHabit);
     }
-    await Promise.all(batch);
+    await batch.commit();
+
+    // Fetch the newly created habits to return them
     const newSnapshot = await getDocs(q);
     return newSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Habit));
   }
@@ -75,3 +79,5 @@ export const updateHabit = async (habitId: string, completed: boolean) => {
   const habitRef = doc(db, 'habits', habitId);
   await updateDoc(habitRef, { completed });
 };
+
+    

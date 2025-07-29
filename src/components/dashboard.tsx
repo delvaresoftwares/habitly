@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ const chartConfig: ChartConfig = {
 };
 
 const getIcon = (iconName: string) => {
-    const className = "h-6 w-6";
+    const className = "h-8 w-8";
     switch (iconName) {
         case 'Sunrise': return <Sunrise className={`${className} text-yellow-400`} />;
         case 'Bed': return <Bed className={`${className} text-blue-400`} />;
@@ -97,65 +97,61 @@ const getIcon = (iconName: string) => {
     }
 }
 
-const HabitItem = ({ habit, onToggle }: { habit: Habit, onToggle: (id: string, completed: boolean) => void }) => {
-  const x = useMotionValue(0);
-  const background = useTransform(
-    x,
-    [-100, 0, 100],
-    ["hsl(var(--destructive) / 0.5)", "hsl(var(--card))", "hsl(var(--primary) / 0.5)"]
-  );
-  const opacity = useTransform(x, [-100, -50, 0, 50, 100], [1, 0.5, 1, 0.5, 1]);
-
+const HabitCard = ({ habit, onToggle, onRemove }: { habit: Habit, onToggle: (id: string, completed: boolean) => void, onRemove: (id: string) => void }) => {
+  
   const handleDragEnd = (event: any, info: any) => {
-    if (info.offset.x > 100) {
-      onToggle(habit.id, true);
-    } else if (info.offset.x < -100) {
-      onToggle(habit.id, false);
+    if (info.offset.x < -100) { // Slide left to complete
+      if(!habit.completed) {
+        onToggle(habit.id, true);
+      }
+      onRemove(habit.id);
+    } else if (info.offset.x > 100) { // Slide right to un-complete
+       if(habit.completed) {
+        onToggle(habit.id, false);
+      }
     }
   };
 
   return (
     <motion.div
+      layout
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ x: -300, opacity: 0 }}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
+      dragElasticity={0.2}
       onDragEnd={handleDragEnd}
-      style={{ x, background }}
-      className={`rounded-lg transition-all duration-300 relative`}
+      className="relative"
     >
-      <motion.div
-        style={{ opacity }}
-        className={`p-4 flex items-center gap-4 bg-card rounded-lg`}
-      >
-        <AnimatePresence>
-            {habit.completed && (
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-green-500"
-                >
-                    <CheckCircle2 size={24} />
-                </motion.div>
-            )}
-        </AnimatePresence>
-        <div className="text-accent pl-8">{getIcon(habit.iconName)}</div>
-        <div className="flex-grow">
-            <p className="font-semibold">{habit.text}</p>
-            <p className="text-sm text-muted-foreground">{habit.time}</p>
-        </div>
-        <div className="flex gap-2 items-center">
-            <X className="text-red-500/50" />
-            <div className="h-6 w-px bg-border" />
-            <Check className="text-green-500/50" />
-        </div>
-      </motion.div>
+      <Card className="overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95">
+        <CardContent className="flex items-center gap-4 p-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+            {getIcon(habit.iconName)}
+          </div>
+          <div className="flex-grow">
+              <p className="font-bold">{habit.text}</p>
+              <p className="text-sm text-muted-foreground">{habit.time}</p>
+          </div>
+          <div className="flex gap-2 items-center text-muted-foreground/50">
+            <Check className="text-green-500" />
+          </div>
+        </CardContent>
+      </Card>
+       <div className="absolute inset-y-0 left-0 flex items-center pl-4 pr-8 bg-green-500/20 rounded-l-lg -z-10">
+          <Check className="text-green-500" />
+      </div>
+      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pl-8 bg-red-500/20 rounded-r-lg -z-10">
+          <X className="text-red-500" />
+      </div>
     </motion.div>
   );
 };
 
 
 export default function Dashboard() {
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [allHabits, setAllHabits] = useState<Habit[]>([]);
+  const [displayedHabits, setDisplayedHabits] = useState<Habit[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingHabits, setLoadingHabits] = useState(true);
   const { user } = useAuth();
@@ -165,7 +161,8 @@ export default function Dashboard() {
       setLoadingHabits(true);
       getUserHabits(user.uid)
         .then(userHabits => {
-            setHabits(userHabits);
+            setAllHabits(userHabits);
+            setDisplayedHabits(userHabits.filter(h => !h.completed));
             setLoadingHabits(false);
         });
       getUserProfile(user.uid)
@@ -174,24 +171,29 @@ export default function Dashboard() {
   }, [user]);
 
   const progress = useMemo(() => {
-    if (habits.length === 0) return 0;
-    const completedCount = habits.filter((h) => h.completed).length;
-    return (completedCount / habits.length) * 100;
-  }, [habits]);
+    if (allHabits.length === 0) return 0;
+    const completedCount = allHabits.filter((h) => h.completed).length;
+    return (completedCount / allHabits.length) * 100;
+  }, [allHabits]);
+  
+  const handleRemoveFromDisplay = (id: string) => {
+    setDisplayedHabits(prev => prev.filter(h => h.id !== id));
+  };
+
 
   const handleHabitToggle = async (id: string, newCompletedState: boolean) => {
     if (!user || !userProfile) return;
 
-    const habitToToggle = habits.find(h => h.id === id);
+    const habitToToggle = allHabits.find(h => h.id === id);
     if (!habitToToggle || habitToToggle.completed === newCompletedState) return;
-
+    
     const oldCompletedState = habitToToggle.completed;
     
-    setHabits(prevHabits =>
-        prevHabits.map(habit =>
-            habit.id === id ? { ...habit, completed: newCompletedState } : habit
-        )
+    // Optimistically update the main habits list
+    const newAllHabits = allHabits.map(habit => 
+      habit.id === id ? { ...habit, completed: newCompletedState } : habit
     );
+    setAllHabits(newAllHabits);
     
     let newStreak = userProfile.streak;
     let newHabitScore = userProfile.habitScore;
@@ -202,12 +204,14 @@ export default function Dashboard() {
         newHabitScore = Math.max(0, newHabitScore - 1);
     }
     
-    const allCompleted = habits.every(h => h.id === id ? newCompletedState : h.completed);
+    const allCompleted = newAllHabits.every(h => h.completed);
     if (allCompleted) {
         newStreak++;
     } else {
-        if (habits.filter(h => h.completed).length === habits.length) {
-            newStreak = Math.max(0, newStreak - 1);
+        // Check if the user just un-completed the final habit
+        const wasPreviouslyAllCompleted = allHabits.every(h => h.completed);
+        if(wasPreviouslyAllCompleted && !newCompletedState){
+             newStreak = Math.max(0, newStreak - 1);
         }
     }
 
@@ -218,28 +222,26 @@ export default function Dashboard() {
         await updateHabit(id, newCompletedState);
         await updateUserScores(user.uid, { streak: newStreak, habitScore: newHabitScore });
     } catch (error) {
-        setHabits(prevHabits =>
-            prevHabits.map(habit =>
-                habit.id === id ? { ...habit, completed: oldCompletedState } : habit
-            )
-        );
+       // Revert optimistic updates on failure
+        setAllHabits(allHabits);
         setUserProfile(userProfile);
+        // Put the card back in view if it was removed
+        if (!displayedHabits.some(h => h.id === id)) {
+            setDisplayedHabits(prev => [...prev, habitToToggle]);
+        }
         console.error("Failed to update habit:", error);
     }
   };
   
   const DailyRoutineSkeleton = () => (
     <div className="space-y-4">
-      {[...Array(8)].map((_, i) => (
-        <Card key={i}>
-            <CardContent className="flex items-center gap-4 p-4">
-            <Skeleton className="h-6 w-6 rounded-full" />
+      {[...Array(5)].map((_, i) => (
+        <Card key={i} className="flex items-center gap-4 p-4">
+            <Skeleton className="h-12 w-12 rounded-lg" />
             <div className="flex-grow space-y-2">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/4" />
             </div>
-            <Skeleton className="h-6 w-6 rounded-full" />
-            </CardContent>
         </Card>
       ))}
     </div>
@@ -255,7 +257,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{Math.round(progress)}%</div>
-                <p className="text-xs text-muted-foreground">{habits.filter(h => h.completed).length} of {habits.length} habits completed</p>
+                <p className="text-xs text-muted-foreground">{allHabits.filter(h => h.completed).length} of {allHabits.length} habits completed</p>
                  <Progress value={progress} className="h-2 mt-2" />
               </CardContent>
             </Card>
@@ -285,8 +287,8 @@ export default function Dashboard() {
                     <Megaphone className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-xl font-bold">"The secret of getting ahead is getting started."</div>
-                    <p className="text-xs text-muted-foreground">- Mark Twain</p>
+                    <div className="text-xl font-bold">"The first step is the hardest."</div>
+                    <p className="text-xs text-muted-foreground">- Confucius</p>
                 </CardContent>
             </Card>
         </div>
@@ -296,12 +298,24 @@ export default function Dashboard() {
                 <Card className="shadow-lg overflow-hidden">
                     <CardHeader>
                         <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
-                        <CardDescription>Slide right to complete, left to reset. Build the life you want.</CardDescription>
+                        <CardDescription>Slide left to complete, slide right to undo. Build the life you want.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-2">
-                         {loadingHabits ? <DailyRoutineSkeleton /> : habits.map((habit) => (
-                           <HabitItem key={habit.id} habit={habit} onToggle={handleHabitToggle} />
-                        ))}
+                    <CardContent className="space-y-4">
+                         {loadingHabits ? (
+                            <DailyRoutineSkeleton />
+                         ) : displayedHabits.length > 0 ? (
+                            <AnimatePresence>
+                                {displayedHabits.map((habit) => (
+                                    <HabitCard key={habit.id} habit={habit} onToggle={handleHabitToggle} onRemove={handleRemoveFromDisplay} />
+                                ))}
+                            </AnimatePresence>
+                         ) : (
+                            <div className="text-center py-12">
+                                <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
+                                <h3 className="mt-2 text-xl font-semibold">All Done for Today!</h3>
+                                <p className="mt-1 text-sm text-muted-foreground">You've completed all your habits. Great job!</p>
+                            </div>
+                         )}
                     </CardContent>
                 </Card>
             </div>
@@ -360,3 +374,4 @@ export default function Dashboard() {
   );
 }
 
+    
