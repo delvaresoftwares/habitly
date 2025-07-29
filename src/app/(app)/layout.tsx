@@ -31,7 +31,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     }
     
     const navItems = [
-        { href: "/", icon: Home, label: "Home" },
+        { href: "/dashboard", icon: Home, label: "Home" },
         { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
         { href: "/profile", icon: User, label: "Profile" },
     ];
@@ -79,8 +79,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                     <nav className="grid grid-cols-3 items-center justify-center p-2">
                         {navItems.map((item) => (
                             <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg">
-                               <item.icon className={cn("h-6 w-6 transition-colors", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
-                               <span className={cn("text-xs font-medium transition-colors", pathname === item.href ? "text-primary" : "text-muted-foreground")}>
+                               <item.icon className={cn("h-6 w-6 transition-colors", pathname.startsWith(item.href) ? "text-primary" : "text-muted-foreground")} />
+                               <span className={cn("text-xs font-medium transition-colors", pathname.startsWith(item.href) ? "text-primary" : "text-muted-foreground")}>
                                    {item.label}
                                </span>
                             </Link>
