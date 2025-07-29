@@ -55,15 +55,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useAuth } from "@/hooks/use-auth";
-
-const initialHabits = [
-  { id: "h1", text: "Wake up at 5:30 AM", time: "5:30 AM", completed: false, icon: <Sun className="h-5 w-5 text-yellow-500" /> },
-  { id: "h2", text: "15 minutes of Mindfulness Meditation", time: "6:00 AM", completed: false, icon: <Flame className="h-5 w-5 text-orange-500" /> },
-  { id: "h3", text: "30-minute HIIT workout", time: "6:30 AM", completed: true, icon: <Activity className="h-5 w-5 text-red-500" /> },
-  { id: "h4", text: "Read for 20 minutes", time: "7:15 AM", completed: false, icon: <User className="h-5 w-5 text-green-500" /> },
-  { id: "h5", text: "Plan your day", time: "8:00 AM", completed: false, icon: <Calendar className="h-5 w-5 text-blue-500" /> },
-  { id: "h6", text: "Reflect and journal before bed", time: "10:00 PM", completed: false, icon: <Moon className="h-5 w-5 text-purple-500" /> },
-];
+import { getUserHabits, updateHabit, type Habit } from "@/services/habits";
+import { Skeleton } from "./ui/skeleton";
 
 const weeklyData = [
   { day: "Mon", habits: 4 },
@@ -98,40 +91,100 @@ const chartConfig: ChartConfig = {
   },
 };
 
+const getIcon = (iconName: string) => {
+    switch (iconName) {
+        case 'Sun': return <Sun className="h-5 w-5 text-yellow-500" />;
+        case 'Flame': return <Flame className="h-5 w-5 text-orange-500" />;
+        case 'Activity': return <Activity className="h-5 w-5 text-red-500" />;
+        case 'User': return <User className="h-5 w-5 text-green-500" />;
+        case 'Calendar': return <Calendar className="h-5 w-5 text-blue-500" />;
+        case 'Moon': return <Moon className="h-5 w-5 text-purple-500" />;
+        default: return <Activity className="h-5 w-5 text-gray-500" />;
+    }
+}
+
 export default function Dashboard() {
-  const [habits, setHabits] = useState(initialHabits);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [streak, setStreak] = useState(21);
-  const [mounted, setMounted] = useState(false);
+  const [loadingHabits, setLoadingHabits] = useState(true);
   const { user, signOut } = useAuth();
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (user) {
+      getUserHabits(user.uid)
+        .then(userHabits => {
+            setHabits(userHabits);
+            setLoadingHabits(false);
+        });
+    }
+  }, [user]);
 
   const progress = useMemo(() => {
+    if (habits.length === 0) return 0;
     const completedCount = habits.filter((h) => h.completed).length;
     return (completedCount / habits.length) * 100;
   }, [habits]);
 
-  const handleHabitToggle = (id: string) => {
-    let newStreak = streak;
-    setHabits((prevHabits) =>
-      prevHabits.map((habit) => {
-        if (habit.id === id) {
-          if (!habit.completed) {
-            newStreak++;
-          } else if (newStreak > 0) {
-            newStreak--;
-          }
-          return { ...habit, completed: !habit.completed };
-        }
-        return habit;
-      })
-    );
-    setStreak(newStreak);
-  };
+  const handleHabitToggle = async (id: string) => {
+    const habitToToggle = habits.find(h => h.id === id);
+    if (!habitToToggle) return;
 
-  if (!mounted) {
-    return null; // Or a loading spinner
-  }
+    const newCompletedState = !habitToToggle.completed;
+    
+    // Optimistic UI update
+    setHabits(prevHabits =>
+        prevHabits.map(habit =>
+            habit.id === id ? { ...habit, completed: newCompletedState } : habit
+        )
+    );
+
+    // Update streak
+    let newStreak = streak;
+    if (newCompletedState) {
+        newStreak++;
+    } else if (newStreak > 0) {
+        newStreak--;
+    }
+    setStreak(newStreak);
+
+    // Persist change to Firestore
+    try {
+        await updateHabit(id, newCompletedState);
+    } catch (error) {
+        // Revert UI on error
+        setHabits(prevHabits =>
+            prevHabits.map(habit =>
+                habit.id === id ? { ...habit, completed: !newCompletedState } : habit
+            )
+        );
+        // Revert streak
+        setStreak(streak);
+        console.error("Failed to update habit:", error);
+    }
+  };
+  
+  const DailyRoutineSkeleton = () => (
+    <Card className="shadow-lg">
+      <CardHeader>
+        <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
+        <CardDescription>Stay on track to build the life you want.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i}>
+            <CardContent className="flex items-center gap-4 p-4">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <div className="flex-grow space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/4" />
+              </div>
+              <Skeleton className="h-6 w-6 rounded-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
@@ -174,32 +227,34 @@ export default function Dashboard() {
       <main className="flex-1 overflow-auto p-4 md:p-8">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
-                    <CardDescription>Stay on track to build the life you want.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {habits.map((habit) => (
-                        <Card key={habit.id} className={`transition-all duration-300 ${habit.completed ? 'bg-accent/10 border-accent' : 'bg-card'}`}>
-                            <CardContent className="flex items-center gap-4 p-4">
-                                <div className="text-accent">{habit.icon}</div>
-                                <div className="flex-grow">
-                                    <p className="font-semibold">{habit.text}</p>
-                                    <p className="text-sm text-muted-foreground">{habit.time}</p>
-                                </div>
-                                <Checkbox
-                                    id={`habit-${habit.id}`}
-                                    checked={habit.completed}
-                                    onCheckedChange={() => handleHabitToggle(habit.id)}
-                                    className="h-6 w-6 rounded-full data-[state=checked]:bg-accent data-[state=checked]:border-accent-foreground border-muted-foreground"
-                                    aria-label={`Mark ${habit.text} as complete`}
-                                />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </CardContent>
-            </Card>
+            {loadingHabits ? <DailyRoutineSkeleton /> : (
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="font-headline text-3xl">Your Daily Routine</CardTitle>
+                        <CardDescription>Stay on track to build the life you want.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {habits.map((habit) => (
+                            <Card key={habit.id} className={`transition-all duration-300 ${habit.completed ? 'bg-accent/10 border-accent' : 'bg-card'}`}>
+                                <CardContent className="flex items-center gap-4 p-4">
+                                    <div className="text-accent">{getIcon(habit.iconName)}</div>
+                                    <div className="flex-grow">
+                                        <p className="font-semibold">{habit.text}</p>
+                                        <p className="text-sm text-muted-foreground">{habit.time}</p>
+                                    </div>
+                                    <Checkbox
+                                        id={`habit-${habit.id}`}
+                                        checked={habit.completed}
+                                        onCheckedChange={() => handleHabitToggle(habit.id)}
+                                        className="h-6 w-6 rounded-full data-[state=checked]:bg-accent data-[state=checked]:border-accent-foreground border-muted-foreground"
+                                        aria-label={`Mark ${habit.text} as complete`}
+                                    />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
           </div>
 
           <div className="space-y-8">
