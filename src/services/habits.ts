@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, writeBatch, orderBy, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, writeBatch, orderBy, getDoc, setDoc, Timestamp, onSnapshot, collectionGroup } from 'firebase/firestore';
 
 export interface Habit {
   id: string;
@@ -16,6 +16,13 @@ export interface Habit {
 export interface HabitHistory {
     [date: string]: 'completed' | 'skipped';
 }
+
+export interface HabitCompletionEvent {
+    userId: string;
+    userName: string;
+    habitText: string;
+}
+
 
 const initialHabits = [
     { text: "Wake up", time: "4:00 AM", iconName: 'Sunrise', order: 1, description: "Start your day early to maximize productivity and enjoy the quiet morning hours." },
@@ -73,12 +80,7 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
     const batch = writeBatch(db);
     for (const habit of initialHabits) {
         const newHabitRef = doc(habitsRef);
-        const newHabit = {
-            ...habit,
-            userId,
-            id: newHabitRef.id,
-        };
-        batch.set(newHabitRef, newHabit);
+        batch.set(newHabitRef, { ...habit, userId, id: newHabitRef.id });
     }
     await batch.commit();
     const newSnapshot = await getDocs(q);
@@ -94,21 +96,22 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   // If last reset was before today, reset all habit completion statuses
   if (getStartOfDay(lastReset) < today) {
     const batch = writeBatch(db);
-    const historyRef = collection(db, 'users', userId, 'habitHistory');
+    const historyColRef = collection(db, 'users', userId, 'habitHistory');
     
-    // Reset all completion statuses for today
-    const todayStr = today.toISOString().split('T')[0];
-    const qHistory = query(historyRef, where('date', '==', todayStr));
-    const historySnapshot = await getDocs(qHistory);
-    
-    historySnapshot.forEach(historyDoc => {
-        batch.delete(historyDoc.ref);
+    // This is a simplification. In a real app, you might want to handle this differently,
+    // e.g., by not deleting but marking a new day. For this app, we clear old statuses
+    // if the user logs in on a new day.
+    const allHistorySnapshot = await getDocs(historyColRef);
+    allHistorySnapshot.forEach(doc => {
+        if(new Date(doc.data().date) < today) {
+           // This part is tricky in a real app. We will skip deleting old history for now.
+        }
     });
 
     batch.set(userStateRef, { lastReset: Timestamp.fromDate(today) });
     await batch.commit();
     
-    // Return habits with completedToday as false
+    // Return habits with completedToday as false since it's a new day
     return habits.map(h => ({ ...h, completedToday: false }));
   }
 
@@ -124,11 +127,46 @@ export const getUserHabits = async (userId: string): Promise<Habit[]> => {
   return habits.map(h => ({...h, completedToday: habitHistory[h.id] ?? false}));
 };
 
-export const updateHabitCompletion = async (userId: string, habitId: string, completed: boolean) => {
+export const updateHabitCompletion = async (userId: string, habitId: string, completed: boolean, userName: string, habitText: string) => {
     const today = getStartOfDay(new Date()).toISOString().split('T')[0];
     const historyId = `${habitId}_${today}`;
     const historyRef = doc(db, 'users', userId, 'habitHistory', historyId);
-    await setDoc(historyRef, { habitId, date: today, completed });
+    
+    const completionData = {
+        habitId,
+        date: today,
+        completed,
+        userId,
+        userName,
+        habitText,
+        timestamp: Timestamp.now()
+    };
+
+    await setDoc(historyRef, completionData);
+};
+
+
+export const listenForHabitCompletions = (callback: (data: HabitCompletionEvent) => void) => {
+    const fiveSecondsAgo = Timestamp.fromMillis(Date.now() - 5000);
+
+    const q = query(
+        collectionGroup(db, 'habitHistory'), 
+        where('completed', '==', true),
+        where('timestamp', '>=', fiveSecondsAgo)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const data = change.doc.data();
+                callback({
+                    userId: data.userId,
+                    userName: data.userName,
+                    habitText: data.habitText,
+                });
+            }
+        });
+    });
 };
 
 export const getHabitById = async (userId: string, habitId: string): Promise<Habit | null> => {
@@ -136,6 +174,16 @@ export const getHabitById = async (userId: string, habitId: string): Promise<Hab
     const docSnap = await getDoc(habitRef);
     if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as Habit;
+    }
+    return null;
+}
+
+export const getHabitOwner = async (habitId: string): Promise<string | null> => {
+    const q = query(collectionGroup(db, 'habits'), where('id', '==', habitId));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        // Assuming habit IDs are unique across all users for this to work
+        return querySnapshot.docs[0].data().userId;
     }
     return null;
 }

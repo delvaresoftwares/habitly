@@ -2,9 +2,9 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { getHabitById, getHabitHistory, Habit, HabitHistory, updateHabit } from '@/services/habits';
+import { getHabitById, getHabitHistory, Habit, HabitHistory, updateHabit, getHabitOwner } from '@/services/habits';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,29 +19,39 @@ export default function HabitDetailPage({ params }: { params: { habitId: string 
     const router = useRouter();
     const { toast } = useToast();
     const [habit, setHabit] = useState<Habit | null>(null);
+    const [ownerId, setOwnerId] = useState<string | null>(null);
     const [history, setHistory] = useState<HabitHistory>({});
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [newTime, setNewTime] = useState("");
-
+    
     useEffect(() => {
-        if (user && params.habitId) {
-            Promise.all([
-                getHabitById(user.uid, params.habitId as string),
-                getHabitHistory(user.uid, params.habitId as string)
-            ]).then(([habitData, historyData]) => {
-                setHabit(habitData);
-                if (habitData) {
-                    setNewTime(habitData.time);
+        if (params.habitId) {
+            getHabitOwner(params.habitId as string).then(ownerUid => {
+                setOwnerId(ownerUid);
+                if (ownerUid) {
+                    Promise.all([
+                        getHabitById(ownerUid, params.habitId as string),
+                        getHabitHistory(ownerUid, params.habitId as string)
+                    ]).then(([habitData, historyData]) => {
+                        setHabit(habitData);
+                        if (habitData) {
+                            setNewTime(habitData.time);
+                        }
+                        setHistory(historyData);
+                        setLoading(false);
+                    });
+                } else {
+                    setLoading(false);
                 }
-                setHistory(historyData);
-                setLoading(false);
             });
         }
-    }, [user, params.habitId]);
+    }, [params.habitId]);
 
     const handleSaveTime = async () => {
-        if (!user || !habit) return;
+        if (!user || !habit || !ownerId) return;
+        if (user.uid !== ownerId) return;
+
         try {
             await updateHabit(user.uid, habit.id, { time: newTime });
             setHabit({ ...habit, time: newTime });
@@ -51,7 +61,6 @@ export default function HabitDetailPage({ params }: { params: { habitId: string 
             toast({ title: "Error", description: "Failed to update time.", variant: "destructive" });
         }
     };
-
 
     if (authLoading || loading) {
         return (
@@ -66,12 +75,14 @@ export default function HabitDetailPage({ params }: { params: { habitId: string 
     if (!habit) {
         return <div>Habit not found.</div>;
     }
+
+    const canEdit = user?.uid === ownerId;
     
     return (
         <div className="p-4 md:p-8 space-y-4">
              <Button variant="ghost" onClick={() => router.back()} className="mb-4">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
+                Back
             </Button>
             <Card>
                 <CardHeader>
@@ -86,10 +97,12 @@ export default function HabitDetailPage({ params }: { params: { habitId: string 
                         ) : (
                             <CardDescription>{habit.time}</CardDescription>
                         )}
-                        {isEditing ? (
-                            <Button size="icon" onClick={handleSaveTime}><Save className="h-4 w-4" /></Button>
-                        ) : (
-                            <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}><Edit className="h-4 w-4" /></Button>
+                         {canEdit && (
+                            isEditing ? (
+                                <Button size="icon" onClick={handleSaveTime}><Save className="h-4 w-4" /></Button>
+                            ) : (
+                                <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}><Edit className="h-4 w-4" /></Button>
+                            )
                         )}
                     </div>
                 </CardHeader>

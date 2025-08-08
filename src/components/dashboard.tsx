@@ -10,9 +10,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { getUserHabits, updateHabitCompletion, type Habit } from "@/services/habits";
+import { getUserHabits, updateHabitCompletion, type Habit, listenForHabitCompletions } from "@/services/habits";
 import { getUserProfile, updateUserScores, type UserProfile } from "@/services/users";
 import { Skeleton } from "./ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 const getIcon = (iconName: string) => {
     const className = "h-8 w-8";
@@ -95,6 +96,7 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingHabits, setLoadingHabits] = useState(true);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -109,8 +111,19 @@ export default function Dashboard() {
           setUserProfile(profile);
           setLoadingHabits(false);
       });
+      
+      const unsubscribe = listenForHabitCompletions((completion) => {
+        if (completion.userId !== user.uid) {
+           toast({
+             title: "🎉 Habit Completed!",
+             description: `${completion.userName} just completed "${completion.habitText}". Keep it up!`,
+           });
+        }
+      });
+
+      return () => unsubscribe();
     }
-  }, [user]);
+  }, [user, toast]);
   
   const handleHabitComplete = async (id: string) => {
     if (!user || !userProfile) return;
@@ -118,7 +131,6 @@ export default function Dashboard() {
     const habitToUpdate = allHabits.find(h => h.id === id);
     if (!habitToUpdate || habitToUpdate.completedToday) return;
 
-    // Optimistic UI update
     const newAllHabits = allHabits.map(h => h.id === id ? { ...h, completedToday: true } : h);
     setAllHabits(newAllHabits);
     setDisplayedHabits(newAllHabits.filter(h => !h.completedToday));
@@ -136,7 +148,7 @@ export default function Dashboard() {
     setUserProfile(newProfile);
 
     try {
-        await updateHabitCompletion(user.uid, id, true);
+        await updateHabitCompletion(user.uid, id, true, user.displayName || "Someone", habitToUpdate.text);
         await updateUserScores(user.uid, { streak: newStreak, habitScore: newHabitScore });
     } catch (error) {
        console.error("Failed to update habit:", error);
@@ -154,7 +166,6 @@ export default function Dashboard() {
     const habitToUpdate = allHabits.find(h => h.id === id);
     if (!habitToUpdate || !habitToUpdate.completedToday) return;
 
-    // Optimistic update
     const newAllHabits = allHabits.map(h => h.id === id ? { ...h, completedToday: false } : h);
     setAllHabits(newAllHabits);
     setDisplayedHabits(newAllHabits.filter(h => !h.completedToday));
@@ -172,7 +183,7 @@ export default function Dashboard() {
     setUserProfile(newProfile);
     
     try {
-        await updateHabitCompletion(user.uid, id, false);
+        await updateHabitCompletion(user.uid, id, false, user.displayName || "Someone", habitToUpdate.text);
         await updateUserScores(user.uid, { streak: newStreak, habitScore: newHabitScore });
     } catch (error) {
         console.error("Failed to undo habit completion:", error);
@@ -245,5 +256,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
