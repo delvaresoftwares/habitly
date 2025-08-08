@@ -4,6 +4,7 @@ import { collection, doc, getDoc, setDoc, updateDoc, getDocs, query, orderBy, Ti
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { User } from 'firebase/auth';
 import { format, subMonths, startOfMonth } from 'date-fns';
+import { Habit, getUserHabits } from './habits';
 
 export interface UserProfile {
   uid: string;
@@ -13,6 +14,14 @@ export interface UserProfile {
   streak: number;
   habitScore: number;
   lastLogin: Timestamp;
+  dailyProgress?: number;
+  totalHabits?: number;
+}
+
+export interface PublicUserProfileData {
+    profile: UserProfile;
+    habits: Habit[];
+    chartData: { month: string; habits: number }[];
 }
 
 export const createUserProfile = async (user: User) => {
@@ -30,6 +39,8 @@ export const createUserProfile = async (user: User) => {
             habitScore: 0,
             lastLogin: Timestamp.now()
         });
+        // This will create the initial habits for the new user
+        await getUserHabits(user.uid);
     } else {
         await updateDoc(userRef, {
             lastLogin: Timestamp.now()
@@ -68,7 +79,20 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
     const usersRef = collection(db, 'users');
     const q = query(usersRef, orderBy('habitScore', 'desc'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as UserProfile);
+    const users = querySnapshot.docs.map(doc => doc.data() as UserProfile);
+
+    // Fetch daily progress for each user
+    const progressPromises = users.map(async (user) => {
+        const userHabits = await getUserHabits(user.uid);
+        const completedToday = userHabits.filter(h => h.completedToday).length;
+        return {
+            ...user,
+            dailyProgress: completedToday,
+            totalHabits: userHabits.length,
+        };
+    });
+
+    return Promise.all(progressPromises);
 }
 
 export const getMonthlyCompletionData = async (userId: string): Promise<{ month: string; habits: number }[]> => {
@@ -94,7 +118,8 @@ export const getMonthlyCompletionData = async (userId: string): Promise<{ month:
 
     querySnapshot.forEach(doc => {
         const data = doc.data();
-        const date = new Date(data.date);
+        // Ensure date is treated correctly
+        const date = new Date(data.date + 'T00:00:00'); // Assume UTC date
         const monthKey = format(date, 'yyyy-MM');
         if (monthlyData.hasOwnProperty(monthKey)) {
             monthlyData[monthKey]++;
@@ -103,7 +128,7 @@ export const getMonthlyCompletionData = async (userId: string): Promise<{ month:
 
     return months.map(monthDate => {
         const monthKey = format(monthDate, 'yyyy-MM');
-        const monthName = format(monthDate, 'MMMM');
+        const monthName = format(monthDate, 'MMM');
         return {
             month: monthName,
             habits: monthlyData[monthKey]
@@ -111,4 +136,20 @@ export const getMonthlyCompletionData = async (userId: string): Promise<{ month:
     });
 };
 
-    
+export const getPublicUserProfileData = async (userId: string): Promise<PublicUserProfileData | null> => {
+    const [profile, habits, chartData] = await Promise.all([
+        getUserProfile(userId),
+        getUserHabits(userId),
+        getMonthlyCompletionData(userId)
+    ]);
+
+    if (!profile) {
+        return null;
+    }
+
+    return {
+        profile,
+        habits,
+        chartData
+    };
+};

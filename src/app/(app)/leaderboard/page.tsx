@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
-import { Flame, Trophy } from 'lucide-react';
+import { Flame, Trophy, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 export default function LeaderboardPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -61,10 +62,10 @@ export default function LeaderboardPage() {
                                 <li key={user.uid}>
                                     <Link href={`/profile/${user.uid}`}>
                                         <Card className={cn(
-                                            "flex items-center justify-between p-3 sm:p-4 transition-all duration-300 hover:bg-muted",
+                                            "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 transition-all duration-300 hover:bg-muted",
                                             currentUser?.uid === user.uid ? 'border-primary ring-2 ring-primary' : ''
                                         )}>
-                                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full">
                                                 <span className="text-base sm:text-lg font-bold w-6 text-center text-muted-foreground">{index + 1}</span>
                                                 <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                                                     <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName} />
@@ -72,18 +73,26 @@ export default function LeaderboardPage() {
                                                 </Avatar>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold truncate">{user.displayName}</p>
-                                                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
+                                                    <div className="flex items-center gap-3 sm:gap-6 text-sm text-muted-foreground mt-1">
+                                                        <div className="flex items-center gap-1.5" title="Streak">
+                                                            <Flame className="text-orange-400 h-4 w-4" />
+                                                            <span className="font-bold">{user.streak}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5" title="Habit Score">
+                                                            <Trophy className="text-yellow-400 h-4 w-4" />
+                                                            <span className="font-bold">{user.habitScore}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3 sm:gap-6 text-base">
-                                                <div className="flex items-center gap-1.5" title="Streak">
-                                                    <Flame className="text-orange-400 h-5 w-5" />
-                                                    <span className="font-bold">{user.streak}</span>
+                                            <div className="w-full sm:w-auto mt-3 sm:mt-0 pl-10 sm:pl-0">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle2 className="h-4 w-4 text-green-500"/>
+                                                    <span className="text-xs text-muted-foreground font-semibold whitespace-nowrap">
+                                                        {user.dailyProgress ?? 0} / {user.totalHabits ?? 29} Today
+                                                    </span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5" title="Habit Score">
-                                                    <Trophy className="text-yellow-400 h-5 w-5" />
-                                                    <span className="font-bold">{user.habitScore}</span>
-                                                </div>
+                                                <Progress value={((user.dailyProgress ?? 0) / (user.totalHabits ?? 29)) * 100} className="h-2 mt-1"/>
                                             </div>
                                         </Card>
                                     </Link>
