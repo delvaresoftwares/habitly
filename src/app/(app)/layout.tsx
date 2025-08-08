@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { Home, Trophy, User, LogOut } from "lucide-react";
+import { Home, Trophy, User, LogOut, MessageSquare } from "lucide-react";
 import { RhythmFlowLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,10 +33,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     const navItems = [
         { href: "/dashboard", icon: Home, label: "Home" },
         { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+        { href: "/chat", icon: MessageSquare, label: "Chat" },
         { href: "/profile", icon: User, label: "Profile" },
     ];
-
-    const isHabitDetailPage = /^\/habit\/.+/.test(pathname);
 
     return (
         <div className="flex flex-col min-h-screen w-full bg-background md:flex-row">
@@ -77,20 +76,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 </main>
 
                 {/* Mobile Bottom Navigation */}
-                {!isHabitDetailPage && (
-                    <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl border-t md:hidden">
-                        <nav className="grid grid-cols-3 items-center justify-center p-2">
-                            {navItems.map((item) => (
-                                <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg">
-                                <item.icon className={cn("h-6 w-6 transition-colors", pathname.startsWith(item.href) ? "text-primary" : "text-muted-foreground")} />
-                                <span className={cn("text-xs font-medium transition-colors", pathname.startsWith(item.href) ? "text-primary" : "text-muted-foreground")}>
-                                    {item.label}
-                                </span>
-                                </Link>
-                            ))}
-                        </nav>
-                    </Card>
-                )}
+                <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl border-t md:hidden">
+                    <nav className="grid grid-cols-4 items-center justify-center p-2">
+                        {navItems.map((item) => (
+                            <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg">
+                            <item.icon className={cn("h-6 w-6 transition-colors", pathname.startsWith(item.href) ? "text-primary" : "text-muted-foreground")} />
+                            <span className={cn("text-xs font-medium transition-colors", pathname.startsWith(item.href) ? "text-primary" : "text-muted-foreground")}>
+                                {item.label}
+                            </span>
+                            </Link>
+                        ))}
+                    </nav>
+                </Card>
             </div>
         </div>
     );
