@@ -60,7 +60,7 @@ export default function LeaderboardPage() {
                         <ul className="space-y-4">
                             {users.map((user, index) => (
                                 <li key={user.uid}>
-                                    <Link href={`/profile/${user.uid}`}>
+                                    <Link href={user.uid === currentUser.uid ? `/profile` : `/profile/${user.uid}`} className="block">
                                         <Card className={cn(
                                             "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 transition-all duration-300 hover:bg-muted",
                                             currentUser?.uid === user.uid ? 'border-primary ring-2 ring-primary' : ''
