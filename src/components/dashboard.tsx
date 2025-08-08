@@ -18,24 +18,24 @@ import { useToast } from "@/hooks/use-toast";
 const getIcon = (iconName: string) => {
     const className = "h-8 w-8";
     switch (iconName) {
-        case 'Sunrise': return <Sunrise className={`${className} text-yellow-400`} />;
-        case 'Bed': return <Bed className={`${className} text-blue-400`} />;
-        case 'Tooth': return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className + " text-gray-300"}><path d="M11.2 3.193c.15-.386.44-.693.8-.893C14.7 1.3 15 2.5 15 3c0 .667 0 1.333 0 2h2c.5 0 1 .5 1 1v2c0 .5-.5 1-1 1h-2c0 .667 0 1.333 0 2 0 .5-.5 1-1 1H9c-.5 0-1-.5-1-1 0-.667 0-1.333 0-2H6c-.5 0-1-.5-1-1V7c0-.5.5-1 1-1h2c0-.667 0-1.333 0-2 0-.5.3-1.7 2.2-2.807Z"/><path d="M6 12h12c0 1.5-1 3-3 3H9c-2 0-3-1.5-3-3Z"/><path d="M18 15v2a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-2"/><path d="M14 15.5v.5"/><path d="M10 15.5v.5"/></svg>;
-        case 'GlassWater': return <GlassWater className={`${className} text-cyan-400`} />;
-        case 'ShowerHead': return <ShowerHead className={`${className} text-sky-400`} />;
+        case 'Sunrise': return <Sunrise className={`${className} text-orange-400`} />;
+        case 'Bed': return <Bed className={`${className} text-indigo-400`} />;
+        case 'Tooth': return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className + " text-blue-300"}><path d="M11.2 3.193c.15-.386.44-.693.8-.893C14.7 1.3 15 2.5 15 3c0 .667 0 1.333 0 2h2c.5 0 1 .5 1 1v2c0 .5-.5 1-1 1h-2c0 .667 0 1.333 0 2 0 .5-.5 1-1 1H9c-.5 0-1-.5-1-1 0-.667 0-1.333 0-2H6c-.5 0-1-.5-1-1V7c0-.5.5-1 1-1h2c0-.667 0-1.333 0-2 0-.5.3-1.7 2.2-2.807Z"/><path d="M6 12h12c0 1.5-1 3-3 3H9c-2 0-3-1.5-3-3Z"/><path d="M18 15v2a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-2"/><path d="M14 15.5v.5"/><path d="M10 15.5v.5"/></svg>;
+        case 'GlassWater': return <GlassWater className={`${className} text-sky-400`} />;
+        case 'ShowerHead': return <ShowerHead className={`${className} text-cyan-400`} />;
         case 'BrainCircuit': return <BrainCircuit className={`${className} text-purple-400`} />;
-        case 'Flame': return <Flame className={`${className} text-orange-400`} />;
-        case 'Coffee': return <Coffee className={`${className} text-amber-600`} />;
-        case 'BookOpen': return <BookOpen className={`${className} text-green-400`} />;
-        case 'Timer': return <Timer className={`${className} text-gray-400`} />;
-        case 'Sun': return <Sun className={`${className} text-yellow-300`} />;
-        case 'Utensils': return <Utensils className={`${className} text-lime-400`} />;
-        case 'Gamepad2': return <Gamepad2 className={`${className} text-indigo-400`} />;
-        case 'Pizza': return <Pizza className={`${className} text-red-400`} />;
-        case 'Sunset': return <Sunset className={`${className} text-orange-500`} />;
-        case 'Dumbbell': return <Dumbbell className={`${className} text-rose-400`} />;
-        case 'Clapperboard': return <Clapperboard className={`${className} text-fuchsia-400`} />;
-        case 'BedDouble': return <BedDouble className={`${className} text-blue-500`} />;
+        case 'Flame': return <Flame className={`${className} text-red-500`} />;
+        case 'Coffee': return <Coffee className={`${className} text-yellow-700`} />;
+        case 'BookOpen': return <BookOpen className={`${className} text-green-500`} />;
+        case 'Timer': return <Timer className={`${className} text-gray-500`} />;
+        case 'Sun': return <Sun className={`${className} text-yellow-400`} />;
+        case 'Utensils': return <Utensils className={`${className} text-lime-500`} />;
+        case 'Gamepad2': return <Gamepad2 className={`${className} text-blue-500`} />;
+        case 'Pizza': return <Pizza className={`${className} text-amber-500`} />;
+        case 'Sunset': return <Sunset className={`${className} text-orange-600`} />;
+        case 'Dumbbell': return <Dumbbell className={`${className} text-rose-500`} />;
+        case 'Clapperboard': return <Clapperboard className={`${className} text-fuchsia-500`} />;
+        case 'BedDouble': return <BedDouble className={`${className} text-indigo-500`} />;
         default: return <Activity className={`${className} text-gray-500`} />;
     }
 }
