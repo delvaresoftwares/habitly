@@ -34,6 +34,13 @@ export default function UserProfilePage({ params }: { params: { userId: string }
 
   useEffect(() => {
     if (params.userId) {
+      // If the user is trying to view their own public profile via this page,
+      // redirect them to their editable profile page for a better experience.
+      if (user?.uid === params.userId) {
+        router.push('/profile');
+        return;
+      }
+      
       setProfileLoading(true);
       getPublicUserProfileData(params.userId)
         .then((data) => {
@@ -45,7 +52,7 @@ export default function UserProfilePage({ params }: { params: { userId: string }
           setProfileLoading(false);
         });
     }
-  }, [params.userId]);
+  }, [params.userId, user, router]);
   
   if (authLoading || profileLoading) {
     return (
